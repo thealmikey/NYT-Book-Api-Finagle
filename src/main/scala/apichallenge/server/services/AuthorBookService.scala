@@ -124,11 +124,11 @@ class AuthorBookService(
       }
   }
 
-  def searchApiAndRedis( authorName: String,
-  date: List[String] = List.empty[String]
-  ): IO[AuthorBookSearchResult] = {{
-
-  }
+//  def searchApiAndRedis( authorName: String,
+//  date: List[String] = List.empty[String]
+//  ): IO[AuthorBookSearchResult] = {
+//
+//  }
 
   def filterBooksByDate(date: String, books: List[RawBook]): List[RawBook] = {
     books.filter({ book =>
