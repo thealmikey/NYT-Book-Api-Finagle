@@ -4,7 +4,7 @@ import apichallenge.client.routes.responses.{RankHistory, RawBook}
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.models.{
   AuthorBookSearchResult,
-  AuthorDateSearchResults,
+  RawAuthorDateSearchResults,
   AuthorNameWithBooks,
   Book
 }
@@ -28,24 +28,34 @@ class AuthorBookService(
 ) {
   def searchApiBooksByAuthorAndDate(
       authorName: String,
-      date: List[String] = List.empty[String]
+      date: List[String] = List.empty[String],
+      offset: Int = 20
   ): IO[AuthorBookSearchResult] = {
+    searchRawApi(authorName, date)
+      .map {
+        combineSearchTermWithApiResults(authorName, date, _)
+      }
+  }
+  def searchRawApi(
+      authorName: String,
+      date: List[String] = List.empty[String],
+      offset: Int = 20
+  ): IO[RawAuthorDateSearchResults] = {
     nyTimesClientService
       .searchBooksByAuthorName(
-        authorName
+        authorName,
+        offset
       )
       .flatMap(bookFetch =>
         bookFetch match {
-          case (0, None) => IO(AuthorDateSearchResults())
+          case (0, None) => IO(RawAuthorDateSearchResults())
           case (n, Some(books)) => {
             if (n < 20) {
-              IO { AuthorDateSearchResults(books) }
+              IO { RawAuthorDateSearchResults(books) }
             } else {
               //because we already traversed the first page we
               //don't need the 'offsset=20'
-              var pageList =
-                if (n % 20 != 0) List.range(0, n + 20, 20).tail
-                else List.range(0, n, 20)
+              val pageList = List.range(20, n, 20)
               pageList
                 .map(page =>
                   nyTimesClientService
@@ -58,77 +68,92 @@ class AuthorBookService(
                     )
                   }
                 })
-            }.map(value => (AuthorDateSearchResults(value.get)))
+            }.map(value => (RawAuthorDateSearchResults(value.get)))
           }
         }
       )
-      .map { authorDateSearchRes =>
-        if (!date.isEmpty) {
-          val booksWithAuthor = date
-            .map(searchDate =>
-              filterBooksByDate(searchDate, authorDateSearchRes.books)
-            )
-            .flatten
-            .groupBy(_.author)
-            .map(authorBookTuple => {
-              var rawAuthorBooks = authorBookTuple._2
-              var authorBooks = rawAuthorBooks
-                .map(rawBook => {
-                  var earliestPublishDate =
-                    getEarliestPublishDate(rawBook.ranks_history)
-                  Book(
-                    rawBook.title.get,
-                    rawBook.publisher,
-                    earliestPublishDate
-                  )
-                })
-              AuthorNameWithBooks(
-                authorBookTuple._1.get,
-                Some(
-                  authorBooks
-                )
-              )
-            })
-          AuthorBookSearchResult(
-            authorName.replaceAll("_", " "),
-            Some(booksWithAuthor.toList)
-          )
-        } else {
-          var rawBooks = authorDateSearchRes.books
-          var booksWithAuthor = rawBooks
-            .groupBy(_.author)
-            .map(authorBookTuple => {
-              var rawAuthorBooks = authorBookTuple._2
-              var authorBooks = rawAuthorBooks
-                .map(rawBook => {
-                  var earliestPublishDate =
-                    getEarliestPublishDate(rawBook.ranks_history)
-                  Book(
-                    rawBook.title.get,
-                    rawBook.publisher,
-                    earliestPublishDate
-                  )
-                })
-              AuthorNameWithBooks(
-                authorBookTuple._1.get,
-                Some(
-                  authorBooks
-                )
-              )
-            })
-          AuthorBookSearchResult(
-            authorName.replaceAll("_", " "),
-            Some(booksWithAuthor.toList)
-          )
-        }
+  }
+
+  def combineSearchTermWithApiResults(
+      authorSearchTerm: String,
+      dates: List[String],
+      res: RawAuthorDateSearchResults
+  ): AuthorBookSearchResult = {
+    val rawBooks = if (!dates.isEmpty) {
+      dates
+        .map(searchDate => filterBooksByDate(searchDate, res.books))
+        .flatten
+    } else {
+      res.books
+    }
+    var booksWithAuthor = pairAuthorWithBooks(rawBooks)
+    AuthorBookSearchResult(
+      authorSearchTerm.replaceAll("_", " "),
+      Some(booksWithAuthor.toList)
+    )
+  }
+
+  def searchAuthorAndDateRedis(
+      authorName: String,
+      date: List[String] = List.empty[String]
+  ): IO[Option[AuthorBookSearchResult]] = {
+    authorBookRedisStore
+      .fetchSearchResults(authorName, date)
+      .map { res =>
+        res.map(combineSearchTermWithApiResults(authorName, date, _))
       }
   }
 
-//  def searchApiAndRedis( authorName: String,
-//  date: List[String] = List.empty[String]
-//  ): IO[AuthorBookSearchResult] = {
-//
-//  }
+  def searchBooksByAuthorAndDate(
+      authorName: String,
+      date: List[String] = List.empty[String]
+  ): IO[AuthorBookSearchResult] = {
+    searchAuthorAndDateRedis(authorName, date).flatMap { searchRes =>
+      searchRes match {
+        case Some(value) => IO(value)
+        case None => {
+          searchRawApi(authorName, date)
+            .flatMap { searchRes =>
+              authorBookRedisStore.addSearchResults(
+                authorName,
+                date,
+                searchRes.books
+              )
+            }
+            .flatMap { res =>
+              searchAuthorAndDateRedis(authorName, date).map(_.get)
+            }
+        }
+      }
+    }
+  }
+
+  def pairAuthorWithBooks(
+      rawbooks: List[RawBook]
+  ): List[AuthorNameWithBooks] = {
+    rawbooks
+      .groupBy(_.author)
+      .map(authorBookTuple => {
+        var rawAuthorBooks = authorBookTuple._2
+        var authorBooks = rawAuthorBooks
+          .map(mapRawBookToApiBook(_))
+        AuthorNameWithBooks(
+          authorBookTuple._1.get,
+          Some(
+            authorBooks
+          )
+        )
+      })
+      .toList
+  }
+
+  def mapRawBookToApiBook(rawBook: RawBook): Book = {
+    Book(
+      rawBook.title.get,
+      rawBook.publisher,
+      getEarliestPublishDate(rawBook.ranks_history)
+    )
+  }
 
   def filterBooksByDate(date: String, books: List[RawBook]): List[RawBook] = {
     books.filter({ book =>
@@ -155,4 +180,15 @@ class AuthorBookService(
       case None => None
     }
   }
+
+//  def unfoldApi(
+//      firstPage: IO[(Int, Option[List[RawBook]])]
+//  ): Option[List[RawBook]] = {}
+//
+//  def fetchApiBooksByAuthor(
+//      authorName: String,
+//      offset: Int
+//  ): Option[List[RawBook]] = {
+//
+//  }
 }

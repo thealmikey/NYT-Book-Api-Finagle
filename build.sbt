@@ -28,5 +28,7 @@ libraryDependencies ++= Seq(
   Libs.RefinedCats,
   Libs.CatsEffect,
   Libs.JodaTime,
-  Libs.Shapeless
+  Libs.Shapeless,
+  Libs.FastParse,
+  Libs.CirceRefined
 )

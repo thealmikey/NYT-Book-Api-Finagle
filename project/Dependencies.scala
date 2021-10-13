@@ -17,6 +17,7 @@ object Dependencies {
     val Shapeless = "2.3.3"
     val Logback = "1.2.3"
     val Zio = "2.0.0-M2+139-8caf95dd-SNAPSHOT"
+    val FastParse = "2.2.2"
   }
 
   object Libs {
@@ -30,6 +31,8 @@ object Dependencies {
     val CirceGeneric = circe("generic")
     val CirceOptics = circe("optics")
     val CirceParser = circe("parser")
+    val CirceRefined = circe("refined")
+    val CirceGenericExtras = circe("generic-extras")
 
     def finch(artifact: String): ModuleID =
       "com.github.finagle" %% s"finchx-$artifact" % Versions.finch
@@ -63,6 +66,8 @@ object Dependencies {
     val Logback = "ch.qos.logback" % "logback-classic" % Versions.Logback
 
     val Zio = "dev.zio" %% "zio" % Versions.Zio
+
+    val FastParse = "com.lihaoyi" %% "fastparse" % Versions.FastParse
 
   }
 

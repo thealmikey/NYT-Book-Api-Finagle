@@ -3,7 +3,7 @@ package apichallenge
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.models.{
   AuthorDateSearchParam,
-  AuthorDateSearchResults
+  RawAuthorDateSearchResults
 }
 import apichallenge.server.redis.{AuthorBookRedisStore, RedisJsonCache}
 import apichallenge.server.services.AuthorBookService
@@ -13,29 +13,20 @@ import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Request, Response}
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
-import io.finch._
-
+import io.finch.{
+  Application,
+  Bootstrap,
+  EndpointModule,
+  InternalServerError,
+  Ok
+}
+//import io.finch._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.twitter.finagle.Http
-import io.circe.{Decoder, Encoder, HCursor, Json}
-import io.circe.Decoder.Result
 import io.finch.circe._
 import io.circe.generic.auto._
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
 
 object AppServer extends IOApp with EndpointModule[IO] {
-
-  val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-
-//  implicit val JodaTimeCodec: Encoder[DateTime] with Decoder[DateTime] =
-//    new Encoder[DateTime] with Decoder[DateTime] {
-//      override def apply(a: DateTime): Json =
-//        Encoder.encodeString.apply(formatter.print(a))
-//
-//      override def apply(c: HCursor): Result[DateTime] =
-//        Decoder.decodeString.map(s => formatter.parseDateTime(s)).apply(c)
-//    }
 
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
@@ -44,7 +35,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
       client <- RedisClient[IO].from("redis://localhost")
       redis <-
         RedisJsonCache
-          .createServer[AuthorDateSearchParam, AuthorDateSearchResults](client)
+          .createServer[AuthorDateSearchParam, RawAuthorDateSearchResults](
+            client
+          )
 
     } yield new AuthorBookService(
       new AuthorBookRedisStore(redis),
@@ -64,6 +57,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
     )
   } yield Http.serve(":8080", services)
 
+  override def run(args: List[String]): IO[ExitCode] =
+    createApp.use(_ => IO.never).as(ExitCode.Success)
+
   def authorDateBookSearchEndpoint(authorBookService: AuthorBookService) = {
     get(
       "me" :: "books" :: "list" :: param[String]("author") :: params[String](
@@ -71,12 +67,13 @@ object AppServer extends IOApp with EndpointModule[IO] {
       )
     ) { (author: String, year: List[String]) =>
       authorBookService
-        .searchApiBooksByAuthorAndDate(author.replaceAll("\\s", "_"), year)
+        .searchBooksByAuthorAndDate(
+          author.replaceAll("\\s", "_"),
+          year.map(_.toString())
+        )
         .map(Ok)
+    }.handle {
+      case e: Exception => InternalServerError(e)
     }
   }
-
-  override def run(args: List[String]): IO[ExitCode] =
-    createApp.use(_ => IO.never).as(ExitCode.Success)
-
 }

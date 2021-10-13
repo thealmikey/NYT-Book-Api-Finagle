@@ -3,18 +3,21 @@ package apichallenge.server.redis
 import apichallenge.client.routes.responses.RawBook
 import apichallenge.server.models.{
   AuthorDateSearchParam,
-  AuthorDateSearchResults
+  Book,
+  RawAuthorDateSearchResults
 }
+import apichallenge.server.utils.DateUtil.Date
 import cats.effect.IO
 import io.circe._
 import dev.profunktor.redis4cats.RedisCommands
+import eu.timepit.refined.api.Refined
 import io.circe.generic.semiauto.deriveCodec
 
 class AuthorBookRedisStore(
     var redis: RedisCommands[
       IO,
       AuthorDateSearchParam,
-      AuthorDateSearchResults
+      RawAuthorDateSearchResults
     ]
 ) {
 
@@ -22,9 +25,9 @@ class AuthorBookRedisStore(
       author: String = "",
       date: List[String] = List.empty[String],
       books: List[RawBook] = List.empty[RawBook]
-  ): IO[AuthorDateSearchResults] = {
+  ): IO[RawAuthorDateSearchResults] = {
     var params = AuthorDateSearchParam(author, date)
-    var results = AuthorDateSearchResults(books)
+    var results = RawAuthorDateSearchResults(books)
     return redis
       .set(
         params,
@@ -36,7 +39,7 @@ class AuthorBookRedisStore(
   def fetchSearchResults(
       author: String = "",
       date: List[String] = List.empty[String]
-  ): IO[Option[AuthorDateSearchResults]] = {
+  ): IO[Option[RawAuthorDateSearchResults]] = {
     return redis.get(AuthorDateSearchParam(author, date))
   }
 }
