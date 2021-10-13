@@ -13,16 +13,11 @@ import cats.implicits._
 import cats.data._
 import cats.effect.{ContextShift, IO}
 import cats.syntax.all._
-import apichallenge.client.utils._
+
 import apichallenge.server.utils.ApiExceptions.{
-  ApiAuthorizationException,
   ApiException,
-  AppGenericException,
-  DisconnectionException,
-  RateLimitException
+  AppGenericException
 }
-//import cats.Monad
-//import cats.implicits.toBifunctorOps
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,10 +27,23 @@ class NyTimesService(
 ) {
   implicit val ec = ExecutionContext.global
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
-//  implicit val monad: Monad[Future] = cats.implicits.catsStdInstancesForFuture
 
   val log = Logger.get(getClass)
+  /*
+This method uses Finagle Client to get data from the API.
+We model the return as an IO[Either[ApiException,(Int,Option[List[RawBook]])]
 
+We model using IO to easily compose with other parts of the system in this case Redis.
+IO also enables us to easily lift values without worrying about order of events and
+synchronity issues. No need for Awaits with finite durations all over the place.
+
+We model using Either as our request can fail or an operation after fetching, such as Deserializing
+data can fail.
+We model the data from the API using Option, this shows that we might succeed at hitting the endpoint
+with request for an author book but the author might not be present in the list for some reason.
+We can safely deserialize the absence of data with None and Circe would shape it to a list with a little
+magic
+   */
   def searchBooksByAuthorName(
       authorName: String,
       offset: Int = 0
