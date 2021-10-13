@@ -15,4 +15,6 @@ object ApiExceptions {
   case class ApiAuthorizationException(message: String)
       extends ApiException(message)
   case class GenericApiException(message: String) extends ApiException(message)
+  case class JsonConvException(message: String) extends ApiException(message)
+
 }

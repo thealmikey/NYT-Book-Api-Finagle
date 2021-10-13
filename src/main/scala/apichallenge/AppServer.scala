@@ -8,11 +8,22 @@ import apichallenge.server.models.{
 import apichallenge.server.redis.{AuthorBookRedisStore, RedisJsonCache}
 import apichallenge.server.routes.AuthorDateBookSearchValidation
 import apichallenge.server.services.AuthorBookService
+import apichallenge.server.utils.ApiExceptions.{
+  ApiAuthorizationException,
+  ApiException,
+  DisconnectionException,
+  GenericApiException,
+  IllegalParamsException,
+  JsonConvException,
+  MissingQueryException,
+  RateLimitException
+}
 import apichallenge.server.utils.DateUtil.Date
 import apichallenge.server.utils.DateUtil.Date._
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
 import cats.effect.IO.ioEffect
 import com.twitter.finagle.Service
+import com.twitter.finagle.http.Status.BadRequest
 import com.twitter.finagle.http.{Request, Response}
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
@@ -91,12 +102,32 @@ object AppServer extends IOApp with EndpointModule[IO] {
           author.replaceAll("\\s", "_"),
           year.map(_.toString())
         )
+        .map { apiResult =>
+          apiResult match {
+            case Left(value)  => throw value
+            case Right(value) => value
+          }
+        }
         .map(Ok)
     }.handle {
+      case e: ApiException => throw handleApiException(e)
       case e: Exception => {
-        println(e.getMessage)
-        InternalServerError(e)
+        println("only gets here")
+        InternalServerError((e))
       }
+    }
+  }
+  def handleApiException(apiException: ApiException) = {
+    apiException match {
+      case RateLimitException(message)    => RateLimitException(message)
+      case MissingQueryException(message) => MissingQueryException(message)
+      case DisconnectionException(message) =>
+        DisconnectionException(message)
+      case IllegalParamsException(message) => IllegalParamsException(message)
+      case ApiAuthorizationException(message) =>
+        ApiAuthorizationException(message)
+      case GenericApiException(message) => GenericApiException(message)
+      case JsonConvException(message)   => JsonConvException(message)
     }
   }
 }

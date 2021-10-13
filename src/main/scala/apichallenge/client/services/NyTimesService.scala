@@ -19,9 +19,11 @@ import apichallenge.server.utils.ApiExceptions.{
   ApiException,
   DisconnectionException,
   GenericApiException,
+  JsonConvException,
   RateLimitException
 }
-
+//import cats.Monad
+//import cats.implicits.toBifunctorOps
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,6 +33,7 @@ class NyTimesService(
 ) {
   implicit val ec = ExecutionContext.global
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
+//  implicit val monad: Monad[Future] = cats.implicits.catsStdInstancesForFuture
 
   val log = Logger.get(getClass)
 
@@ -72,7 +75,8 @@ class NyTimesService(
               .leftMap(failure => {
                 log.error("full message", failure.printStackTrace())
                 log.error(failure, "error parsing JSON to string")
-                (0, Option(List.empty[RawBook]))
+                JsonConvException("Error converting JSON proper")
+                //                (0, Option(List.empty[RawBook]))
               })
           booksRes <-
             EitherT
@@ -87,11 +91,12 @@ class NyTimesService(
               .leftMap(failure => {
                 log.error(failure, "error parsing JSON into BooksResponse")
                 throw new Exception("Testing throw here")
-//                throw mapExceptions(response)
-                (0, Option(List.empty[RawBook]))
+                //                throw mapExceptions(response)
+                //                (0, Option(List.empty[RawBook]))
+                mapExceptions(response)
               })
 
-        } yield booksRes)
+        } yield booksRes).value
       }
     }
   }

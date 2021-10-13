@@ -4,13 +4,15 @@ import apichallenge.client.routes.responses.{RankHistory, RawBook}
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.models.{
   AuthorBookSearchResult,
-  RawAuthorDateSearchResults,
   AuthorNameWithBooks,
-  Book
+  Book,
+  RawAuthorDateSearchResults
 }
 import apichallenge.server.redis.AuthorBookRedisStore
+import apichallenge.server.utils.ApiExceptions.ApiException
 import cats.effect.IO
 import org.joda.time.format.DateTimeFormat
+import cats.syntax.either._ // for asRight
 
 class AuthorBookService(
     val authorBookRedisStore: AuthorBookRedisStore,
@@ -19,10 +21,14 @@ class AuthorBookService(
   def mapRawToApiResult(
       authorName: String,
       date: List[String] = List.empty[String]
-  ): IO[AuthorBookSearchResult] = {
+  ): IO[Either[ApiException, AuthorBookSearchResult]] = {
     searchApiBooksByAuthorAndDate(authorName, date)
-      .map {
-        combineSearchTermWithApiResults(authorName, date, _)
+      .map { result =>
+        result match {
+          case Left(value) => value.asLeft[AuthorBookSearchResult]
+          case Right(value) =>
+            Right(combineSearchTermWithApiResults(authorName, date, value))
+        }
       }
   }
   //searchApiBooksByAuthorAndDate
@@ -30,32 +36,46 @@ class AuthorBookService(
       authorName: String,
       date: List[String] = List.empty[String],
       offset: Int = 20
-  ): IO[RawAuthorDateSearchResults] = {
+  ): IO[Either[ApiException, RawAuthorDateSearchResults]] = {
     nyTimesClientService
       .searchBooksByAuthorName(authorName, offset)
-      .flatMap(bookFetch =>
-        bookFetch match {
-          case (0, None) => IO(RawAuthorDateSearchResults())
-          case (n, Some(books)) => {
-            if (n < 20) {
-              IO { RawAuthorDateSearchResults(books) }
-            } else {
-              //because we already traversed the first page we
-              //don't need the 'offsset=20'
-              val pageList = List.range(20, n, 20)
-              pageList
-                .map(page =>
-                  nyTimesClientService
-                    .searchBooksByAuthorName(authorName, page)
-                )
-                .foldLeft(IO(Option(books)))((firstReqData, followReqData) => {
-                  firstReqData.flatMap { firstReqBooks =>
-                    followReqData.map(followReqBooks =>
-                      followReqBooks._2.map(books => books ++ firstReqBooks.get)
+      .flatMap(bookFetchEither =>
+        bookFetchEither match {
+          case Left(exception) =>
+            IO(exception.asLeft[RawAuthorDateSearchResults])
+          case Right(bookFetch) => {
+            bookFetch match {
+              case (0, None) => IO(Right(RawAuthorDateSearchResults()))
+              case (n, Some(books)) => {
+                if (n < 20) {
+                  IO { Right(RawAuthorDateSearchResults(books)) }
+                } else {
+                  //because we already traversed the first page we
+                  //don't need the 'offsset=20'
+                  val pageList = List.range(20, n, 20)
+                  pageList
+                    .map(page =>
+                      nyTimesClientService
+                        .searchBooksByAuthorName(authorName, page)
                     )
-                  }
-                })
-            }.map(value => (RawAuthorDateSearchResults(value.get)))
+                    .foldLeft(IO(Option(books)))(
+                      (firstReqData, followReqData) => {
+                        firstReqData.flatMap { firstReqBooks =>
+                          followReqData.map(followReqBooks =>
+//                            followReqBooks._2
+                            followReqBooks match {
+                              case Right(value) =>
+                                value._2
+                                  .map(books => books ++ firstReqBooks.get)
+                              case Left(exception) => None
+                            }
+                          )
+                        }
+                      }
+                    )
+                }.map(value => (Right(RawAuthorDateSearchResults(value.get))))
+              }
+            }
           }
         }
       )
@@ -94,21 +114,36 @@ class AuthorBookService(
   def searchBooksByAuthorAndDate(
       authorName: String,
       date: List[String] = List.empty[String]
-  ): IO[AuthorBookSearchResult] = {
+  ): IO[Either[ApiException, AuthorBookSearchResult]] = {
     searchAuthorAndDateRedis(authorName, date).flatMap { searchRes =>
       searchRes match {
-        case Some(value) => IO(value)
+        case Some(value) => IO(value.asRight)
         case None => {
           searchApiBooksByAuthorAndDate(authorName, date)
             .flatMap { searchRes =>
-              authorBookRedisStore.addSearchResults(
-                authorName,
-                date,
-                searchRes.books
-              )
+              searchRes match {
+                case Left(value) => IO(value.asLeft[AuthorBookSearchResult])
+                case Right(value) =>
+                  authorBookRedisStore
+                    .addSearchResults(
+                      authorName,
+                      date,
+                      searchRes.toOption.get.books
+                    )
+                    .map(
+                      combineSearchTermWithApiResults(authorName, date, _)
+                        .asRight[ApiException]
+                    )
+              }
             }
-            .flatMap { res =>
-              searchAuthorAndDateRedis(authorName, date).map(_.get)
+            .map { res =>
+              res match {
+                case excep @ Left(value)       => excep
+                case correctRes @ Right(value) => correctRes
+              }
+//              searchAuthorAndDateRedis(authorName, date).map(
+//                _.get.asRight[ApiException]
+//              )
             }
         }
       }
