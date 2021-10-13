@@ -56,6 +56,7 @@
     <orderEntry type="library" name="sbt: eu.timepit:refined_2.12:0.9.17:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-core_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-fs2_2.12:0.11.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-generic-extras_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-generic_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-iteratee_2.12:0.12.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-jawn_2.12:0.13.0:jar" level="project" />

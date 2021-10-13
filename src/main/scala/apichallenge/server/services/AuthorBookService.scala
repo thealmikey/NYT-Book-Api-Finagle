@@ -12,40 +12,27 @@ import apichallenge.server.redis.AuthorBookRedisStore
 import cats.effect.IO
 import org.joda.time.format.DateTimeFormat
 
-case class BooksPaged(
-    totalPages: Int,
-    books: List[RawBook],
-    inProgress: Set[Int],
-    unvisited: Set[Int]
-)
-//object BooksPaged {
-//  def setUnvisitedFromTotalPages(totalPages: Int): Set[Int] = {}
-//}
-
 class AuthorBookService(
     val authorBookRedisStore: AuthorBookRedisStore,
     var nyTimesClientService: NyTimesService
 ) {
-  def searchApiBooksByAuthorAndDate(
+  def mapRawToApiResult(
       authorName: String,
-      date: List[String] = List.empty[String],
-      offset: Int = 20
+      date: List[String] = List.empty[String]
   ): IO[AuthorBookSearchResult] = {
-    searchRawApi(authorName, date)
+    searchApiBooksByAuthorAndDate(authorName, date)
       .map {
         combineSearchTermWithApiResults(authorName, date, _)
       }
   }
-  def searchRawApi(
+  //searchApiBooksByAuthorAndDate
+  def searchApiBooksByAuthorAndDate(
       authorName: String,
       date: List[String] = List.empty[String],
       offset: Int = 20
   ): IO[RawAuthorDateSearchResults] = {
     nyTimesClientService
-      .searchBooksByAuthorName(
-        authorName,
-        offset
-      )
+      .searchBooksByAuthorName(authorName, offset)
       .flatMap(bookFetch =>
         bookFetch match {
           case (0, None) => IO(RawAuthorDateSearchResults())
@@ -81,12 +68,12 @@ class AuthorBookService(
   ): AuthorBookSearchResult = {
     val rawBooks = if (!dates.isEmpty) {
       dates
-        .map(searchDate => filterBooksByDate(searchDate, res.books))
+        .map(searchDate => filterBooksBySearchDate(searchDate, res.books))
         .flatten
     } else {
       res.books
     }
-    var booksWithAuthor = pairAuthorWithBooks(rawBooks)
+    var booksWithAuthor = pairAuthorWithTheirBooks(rawBooks)
     AuthorBookSearchResult(
       authorSearchTerm.replaceAll("_", " "),
       Some(booksWithAuthor.toList)
@@ -112,7 +99,7 @@ class AuthorBookService(
       searchRes match {
         case Some(value) => IO(value)
         case None => {
-          searchRawApi(authorName, date)
+          searchApiBooksByAuthorAndDate(authorName, date)
             .flatMap { searchRes =>
               authorBookRedisStore.addSearchResults(
                 authorName,
@@ -128,7 +115,7 @@ class AuthorBookService(
     }
   }
 
-  def pairAuthorWithBooks(
+  def pairAuthorWithTheirBooks(
       rawbooks: List[RawBook]
   ): List[AuthorNameWithBooks] = {
     rawbooks
@@ -155,7 +142,10 @@ class AuthorBookService(
     )
   }
 
-  def filterBooksByDate(date: String, books: List[RawBook]): List[RawBook] = {
+  def filterBooksBySearchDate(
+      date: String,
+      books: List[RawBook]
+  ): List[RawBook] = {
     books.filter({ book =>
       var bookDates = book.ranks_history
         .getOrElse(List.empty[RankHistory])
@@ -180,15 +170,4 @@ class AuthorBookService(
       case None => None
     }
   }
-
-//  def unfoldApi(
-//      firstPage: IO[(Int, Option[List[RawBook]])]
-//  ): Option[List[RawBook]] = {}
-//
-//  def fetchApiBooksByAuthor(
-//      authorName: String,
-//      offset: Int
-//  ): Option[List[RawBook]] = {
-//
-//  }
 }

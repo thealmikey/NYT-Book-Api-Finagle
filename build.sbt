@@ -30,5 +30,6 @@ libraryDependencies ++= Seq(
   Libs.JodaTime,
   Libs.Shapeless,
   Libs.FastParse,
-  Libs.CirceRefined
+  Libs.CirceRefined,
+  Libs.CirceGenericExtras
 )

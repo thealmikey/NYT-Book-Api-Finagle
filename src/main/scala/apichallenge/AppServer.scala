@@ -6,13 +6,17 @@ import apichallenge.server.models.{
   RawAuthorDateSearchResults
 }
 import apichallenge.server.redis.{AuthorBookRedisStore, RedisJsonCache}
+import apichallenge.server.routes.AuthorDateBookSearchValidation
 import apichallenge.server.services.AuthorBookService
+import apichallenge.server.utils.DateUtil.Date
+import apichallenge.server.utils.DateUtil.Date._
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
 import cats.effect.IO.ioEffect
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Request, Response}
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
+import eu.timepit.refined.api.Refined
 import io.finch.{
   Application,
   Bootstrap,
@@ -20,11 +24,17 @@ import io.finch.{
   InternalServerError,
   Ok
 }
+
+import scala.util.{Failure, Success}
 //import io.finch._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.twitter.finagle.Http
 import io.finch.circe._
 import io.circe.generic.auto._
+import eu.timepit.refined._
+import eu.timepit.refined.auto._
+import eu.timepit.refined.generic._
+import eu.timepit.refined.string._
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
@@ -66,6 +76,16 @@ object AppServer extends IOApp with EndpointModule[IO] {
         "year"
       )
     ) { (author: String, year: List[String]) =>
+      var checkedYears = year.takeWhile {
+        AuthorDateBookSearchValidation.validate(_) match {
+          case Success(value) => true
+          case Failure(exception) => {
+            throw exception
+            false
+          }
+        }
+      }
+
       authorBookService
         .searchBooksByAuthorAndDate(
           author.replaceAll("\\s", "_"),
@@ -73,7 +93,10 @@ object AppServer extends IOApp with EndpointModule[IO] {
         )
         .map(Ok)
     }.handle {
-      case e: Exception => InternalServerError(e)
+      case e: Exception => {
+        println(e.getMessage)
+        InternalServerError(e)
+      }
     }
   }
 }

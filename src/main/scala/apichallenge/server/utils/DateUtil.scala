@@ -40,7 +40,7 @@ object DateUtil {
     )
 
   object Date {
-    implicit def dateValidate[_: P] =
+    implicit def dateValidate[_: P]: Validate.Plain[String, Date] =
       fromParser(date, Date())
   }
 }

@@ -14,6 +14,13 @@ import cats.data._
 import cats.effect.{ContextShift, IO}
 import cats.syntax.all._
 import apichallenge.client.utils._
+import apichallenge.server.utils.ApiExceptions.{
+  ApiAuthorizationException,
+  ApiException,
+  DisconnectionException,
+  GenericApiException,
+  RateLimitException
+}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +37,7 @@ class NyTimesService(
   def searchBooksByAuthorName(
       authorName: String,
       offset: Int = 0
-  ): IO[(Int, Option[List[RawBook]])] = {
+  ): IO[Either[ApiException, (Int, Option[List[RawBook]])]] = {
     IO.fromFuture {
       IO {
         val allBooksUrl = s"/svc/books/v3/lists/best-sellers/history.json"
@@ -71,7 +78,7 @@ class NyTimesService(
             EitherT
               .fromEither[Future](rawJson.as[RawBookResponse])
               .map { x =>
-                println(s"The value is $x")
+                println(s"The value is trying to parse json $x")
                 x
               }
               .map(booksRes =>
@@ -79,11 +86,28 @@ class NyTimesService(
               )
               .leftMap(failure => {
                 log.error(failure, "error parsing JSON into BooksResponse")
+                throw new Exception("Testing throw here")
+//                throw mapExceptions(response)
                 (0, Option(List.empty[RawBook]))
               })
 
-        } yield booksRes).merge
+        } yield booksRes)
       }
+    }
+  }
+
+  def mapExceptions(response: Response): ApiException = {
+    if (response.statusCode == 403) {
+      RateLimitException(
+        "We have been rate limited"
+      )
+    } else if (response.statusCode == 500) {
+      DisconnectionException("NYTimes Server experiencing some downtime")
+    } else if (response.statusCode == 401) {
+      println("We are having a bad api key day")
+      return ApiAuthorizationException("API key not working")
+    } else {
+      GenericApiException("Something went very wrong")
     }
   }
 }
