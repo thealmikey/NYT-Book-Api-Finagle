@@ -8,6 +8,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 val root = project
   .in(file("."))
+  .enablePlugins(JavaAppPackaging, AshScriptPlugin, DockerPlugin)
   .settings(
     name := "ApiChallenge",
     version := "0.1.0-SNAPSHOT",
@@ -33,3 +34,9 @@ libraryDependencies ++= Seq(
   Libs.CirceRefined,
   Libs.CirceGenericExtras
 )
+dockerBaseImage := "openjdk:jre-alpine"
+dockerRepository := Some("thealmikey")
+dockerExposedPorts.in(Docker) := Seq(8080)
+daemonUser.in(Docker) := "root"
+mainClass in Compile := Some("apichallenge.AppServer")
+version.in(Docker) := "0.0.4"

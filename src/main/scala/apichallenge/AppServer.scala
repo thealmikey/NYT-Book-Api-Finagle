@@ -52,7 +52,7 @@ object AppServer extends IOApp with EndpointModule[IO] {
 
   val authorBookServiceResource =
     for {
-      client <- RedisClient[IO].from("redis://localhost")
+      client <- RedisClient[IO].from("redis://goodcache")
       redis <-
         RedisJsonCache
           .createServer[AuthorDateSearchParam, RawAuthorDateSearchResults](
