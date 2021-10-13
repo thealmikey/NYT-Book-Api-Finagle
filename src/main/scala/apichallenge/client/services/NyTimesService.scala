@@ -99,18 +99,4 @@ class NyTimesService(
     }
   }
 
-//  def mapExceptions(response: Response): ApiException = {
-//    if (response.statusCode == 403) {
-//      RateLimitException(
-//        "We have been rate limited"
-//      )
-//    } else if (response.statusCode == 500) {
-//      DisconnectionException("NYTimes Server experiencing some downtime")
-//    } else if (response.statusCode == 401) {
-//      println("We are having a bad api key day")
-//      return ApiAuthorizationException("API key not working")
-//    } else {
-//      GenericApiException("Something went very wrong")
-//    }
-//  }
 }

@@ -18,6 +18,10 @@ class AuthorBookService(
     val authorBookRedisStore: AuthorBookRedisStore,
     var nyTimesClientService: NyTimesService
 ) {
+  /*
+  This function fetch raw data from the API and maps it into a `case class AuthorBookSearchResult`
+  This case class can then be presented as JSON
+   */
   def mapRawToApiResult(
       authorName: String,
       date: List[String] = List.empty[String]
@@ -31,7 +35,19 @@ class AuthorBookService(
         }
       }
   }
-  //searchApiBooksByAuthorAndDate
+  /*
+  This function gets back raw data from the API, as the data has more fields we still
+  need to map it into a presentable manner with the function above `def mapRawToApiResult`
+  than needed for the API, e.g. Book data has fields like age-group and isbns which
+  are not needed for our particular use case.
+
+  The data returned from the Books API is paged and the function fetches by making
+  multiple calls to the endpoint.
+  This function can be improved to support concurrency as each page after the first
+  (which contains the seed data to tell us the total books) can be fetched individually
+  and combined
+   */
+
   def searchApiBooksByAuthorAndDate(
       authorName: String,
       date: List[String] = List.empty[String],
@@ -81,6 +97,12 @@ class AuthorBookService(
       )
   }
 
+  /*
+  This function creates the final Data structure to present to the End-User of the API.
+  It returns a JSON with the search term fed to the API followed by a set of Authors paired up
+  with the books they've written
+   */
+
   def combineSearchTermWithApiResults(
       authorSearchTerm: String,
       dates: List[String],
@@ -110,6 +132,14 @@ class AuthorBookService(
         res.map(combineSearchTermWithApiResults(authorName, date, _))
       }
   }
+
+  /*
+  This function first checks the search data in Redis before defaulting
+  to the API. If data is absent in Redis, it's fetched, then persisted, then
+  presented to the API end user.  The data has a ttl of `3 minutes`
+
+  The ttl is set in `AuthorBookRedisStore` using Redis Command `redis.ttl(key:Key, t:FiniteDuration)`
+   */
 
   def searchBooksByAuthorAndDate(
       authorName: String,
@@ -141,14 +171,17 @@ class AuthorBookService(
                 case excep @ Left(value)       => excep
                 case correctRes @ Right(value) => correctRes
               }
-//              searchAuthorAndDateRedis(authorName, date).map(
-//                _.get.asRight[ApiException]
-//              )
             }
         }
       }
     }
   }
+
+  /*
+   Authors can have multiple books in the NYT list.
+   This function creates a structure that takes all the books from one author in an array.
+   The author name and the book list are in one Json object
+   */
 
   def pairAuthorWithTheirBooks(
       rawbooks: List[RawBook]
@@ -169,6 +202,12 @@ class AuthorBookService(
       .toList
   }
 
+  /*
+  This function removes the extraneous fields from the `RawBook` from the API.
+  It simplifies it by leaving only the relevant fields.
+  Also it seems that books seem to have multiple `publish_date` data from `Rank History`
+  object. I used the oldest value from the multiple publish dates.
+   */
   def mapRawBookToApiBook(rawBook: RawBook): Book = {
     Book(
       rawBook.title.get,
@@ -189,6 +228,13 @@ class AuthorBookService(
     })
   }
 
+  /*
+  This function iterates through the `rank_history` List that is present for every
+  book. It picks the oldest publish date and returns is an Option[String].
+  The reason we use Option is that sometimes in the API there's missing fields that
+  come back as null. Circe enables us to encode them into None using derivation powered
+  by Shapeless
+   */
   def getEarliestPublishDate(
       rankHistoryOption: Option[List[RankHistory]]
   ): Option[String] = {
