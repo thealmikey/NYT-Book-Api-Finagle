@@ -11,10 +11,9 @@ import apichallenge.server.services.AuthorBookService
 import apichallenge.server.utils.ApiExceptions.{
   ApiAuthorizationException,
   ApiException,
+  AppGenericException,
   DisconnectionException,
-  GenericApiException,
   IllegalParamsException,
-  JsonConvException,
   MissingQueryException,
   RateLimitException
 }
@@ -104,7 +103,7 @@ object AppServer extends IOApp with EndpointModule[IO] {
         )
         .map { apiResult =>
           apiResult match {
-            case Left(value)  => throw value
+            case Left(value)  => throw handleApiException(value)
             case Right(value) => value
           }
         }
@@ -112,22 +111,25 @@ object AppServer extends IOApp with EndpointModule[IO] {
     }.handle {
       case e: ApiException => throw handleApiException(e)
       case e: Exception => {
-        println("only gets here")
+        println(s"only gets here with message,${e.getMessage}")
         InternalServerError((e))
       }
     }
   }
   def handleApiException(apiException: ApiException) = {
     apiException match {
-      case RateLimitException(message)    => RateLimitException(message)
-      case MissingQueryException(message) => MissingQueryException(message)
-      case DisconnectionException(message) =>
-        DisconnectionException(message)
-      case IllegalParamsException(message) => IllegalParamsException(message)
-      case ApiAuthorizationException(message) =>
-        ApiAuthorizationException(message)
-      case GenericApiException(message) => GenericApiException(message)
-      case JsonConvException(message)   => JsonConvException(message)
+      case AppGenericException(value, flags) =>
+        AppGenericException(value).getCause
+      case RateLimitException(message, _) =>
+        RateLimitException(message).getCause
+      case MissingQueryException(message, _) =>
+        MissingQueryException(message).getCause
+      case DisconnectionException(message, _) =>
+        DisconnectionException(message).getCause
+      case IllegalParamsException(message, _) =>
+        IllegalParamsException(message).getCause
+      case ApiAuthorizationException(message, _) =>
+        ApiAuthorizationException(message).getCause
     }
   }
 }

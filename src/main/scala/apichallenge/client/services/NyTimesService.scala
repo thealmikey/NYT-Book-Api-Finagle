@@ -17,9 +17,8 @@ import apichallenge.client.utils._
 import apichallenge.server.utils.ApiExceptions.{
   ApiAuthorizationException,
   ApiException,
+  AppGenericException,
   DisconnectionException,
-  GenericApiException,
-  JsonConvException,
   RateLimitException
 }
 //import cats.Monad
@@ -75,7 +74,7 @@ class NyTimesService(
               .leftMap(failure => {
                 log.error("full message", failure.printStackTrace())
                 log.error(failure, "error parsing JSON to string")
-                JsonConvException("Error converting JSON proper")
+                AppGenericException("Error converting JSON proper")
                 //                (0, Option(List.empty[RawBook]))
               })
           booksRes <-
@@ -90,10 +89,9 @@ class NyTimesService(
               )
               .leftMap(failure => {
                 log.error(failure, "error parsing JSON into BooksResponse")
-                throw new Exception("Testing throw here")
+                AppGenericException("error parsing JSON into BooksResponse")
                 //                throw mapExceptions(response)
                 //                (0, Option(List.empty[RawBook]))
-                mapExceptions(response)
               })
 
         } yield booksRes).value
@@ -101,18 +99,18 @@ class NyTimesService(
     }
   }
 
-  def mapExceptions(response: Response): ApiException = {
-    if (response.statusCode == 403) {
-      RateLimitException(
-        "We have been rate limited"
-      )
-    } else if (response.statusCode == 500) {
-      DisconnectionException("NYTimes Server experiencing some downtime")
-    } else if (response.statusCode == 401) {
-      println("We are having a bad api key day")
-      return ApiAuthorizationException("API key not working")
-    } else {
-      GenericApiException("Something went very wrong")
-    }
-  }
+//  def mapExceptions(response: Response): ApiException = {
+//    if (response.statusCode == 403) {
+//      RateLimitException(
+//        "We have been rate limited"
+//      )
+//    } else if (response.statusCode == 500) {
+//      DisconnectionException("NYTimes Server experiencing some downtime")
+//    } else if (response.statusCode == 401) {
+//      println("We are having a bad api key day")
+//      return ApiAuthorizationException("API key not working")
+//    } else {
+//      GenericApiException("Something went very wrong")
+//    }
+//  }
 }
