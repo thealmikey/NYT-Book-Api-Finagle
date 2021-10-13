@@ -91,7 +91,7 @@ object AppServer extends IOApp with EndpointModule[IO] {
         AuthorDateBookSearchValidation.validate(_) match {
           case Success(value) => true
           case Failure(exception) => {
-            throw exception
+            throw IllegalParamsException(exception.getMessage)
             false
           }
         }

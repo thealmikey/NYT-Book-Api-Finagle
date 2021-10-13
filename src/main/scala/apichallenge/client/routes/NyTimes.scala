@@ -13,5 +13,5 @@ object NyTimes {
     Request(Method.Get, s"best-sellers/history.json?api_key=${apiKey}")
 //  val apiKey = "zNdQtABZ19IRAsvf89dLq6ZQTf5mLO2P"
 //  val apiKey = "NwV0o2zA1vDYGpzbtRz7jOaayEAGCZBK"
-  val apiKey = "4VESd0yA8FCQs7nFGGgzSSDhzK2MEzZ"
+  val apiKey = "4VESd0yA8FCQs7nFGGgzSSDhzK2MEzZT"
 }
