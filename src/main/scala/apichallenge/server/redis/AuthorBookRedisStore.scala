@@ -6,12 +6,11 @@ import apichallenge.server.models.{
   Book,
   RawAuthorDateSearchResults
 }
-import apichallenge.server.utils.DateUtil.Date
+
 import cats.effect.IO
-import io.circe._
 import dev.profunktor.redis4cats.RedisCommands
-import eu.timepit.refined.api.Refined
-import io.circe.generic.semiauto.deriveCodec
+
+import scala.concurrent.duration._
 
 class AuthorBookRedisStore(
     var redis: RedisCommands[
@@ -28,6 +27,7 @@ class AuthorBookRedisStore(
   ): IO[RawAuthorDateSearchResults] = {
     var params = AuthorDateSearchParam(author, date)
     var results = RawAuthorDateSearchResults(books)
+    redis.expire(params, 3.minutes)
     return redis
       .set(
         params,
