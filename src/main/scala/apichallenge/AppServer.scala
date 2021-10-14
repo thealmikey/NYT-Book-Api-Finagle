@@ -1,5 +1,7 @@
 package apichallenge
 
+import apichallenge.client.routes.responses.NyTimesErrorResponse
+import apichallenge.client.utils.Api
 import apichallenge.server.models.{
   AuthorDateSearchParam,
   RawAuthorDateSearchResults
@@ -11,9 +13,6 @@ import apichallenge.server.utils.ApiExceptions.{
   ApiAuthorizationException,
   ApiException,
   AppGenericException,
-  DisconnectionException,
-  IllegalParamsException,
-  MissingQueryException,
   RateLimitException
 }
 import apichallenge.shared.config.AppServerConf
@@ -26,12 +25,16 @@ import com.twitter.finagle.http.{Request, Response}
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import eu.timepit.refined.api.Refined
+import io.circe.parser
 import io.finch.{
   Application,
   Bootstrap,
   EndpointModule,
   InternalServerError,
-  Ok
+  Ok,
+  Outputs,
+  TooManyRequests,
+  Unauthorized
 }
 import pureconfig.ConfigConvert.fromReaderAndWriter
 import pureconfig.ConfigSource
@@ -48,6 +51,7 @@ import eu.timepit.refined.generic._
 import eu.timepit.refined.string._
 import pureconfig.generic.auto._
 import apichallenge.client.services.NyTimesService
+import apichallenge.server.utils._
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
@@ -91,7 +95,8 @@ object AppServer extends IOApp with EndpointModule[IO] {
       )
     )
   } yield Http.server.withHttpStats
-    .withResponseClassifier(HttpResponseClassifier.ServerErrorsAsFailures)
+    .withResponseClassifier(Api.nytResponseClassifier)
+    .withLabel("NYTimes-Http-Client")
     .serve(":8080", services)
 
   override def run(args: List[String]): IO[ExitCode] =
@@ -107,7 +112,10 @@ object AppServer extends IOApp with EndpointModule[IO] {
         AuthorDateBookSearchValidation.validate(_) match {
           case Success(value) => true
           case Failure(exception) => {
-            throw IllegalParamsException(exception.getMessage)
+            throw AppGenericException(
+              exception.getMessage,
+              new Throwable(exception.getMessage)
+            )
             false
           }
         }
@@ -120,13 +128,24 @@ object AppServer extends IOApp with EndpointModule[IO] {
         )
         .map { apiResult =>
           apiResult match {
-            case Left(value)  => throw handleApiException(value)
             case Right(value) => value
           }
         }
         .map(Ok)
     }.handle {
-      case e: ApiException => throw handleApiException(e)
+      case e: ApiException => {
+        handleApiException(e)
+//        parser.parse(e.getMessage) match {
+//          case Left(value) =>
+//            new Outputs {}.BadRequest(e.asInstanceOf[Exception])
+//          case Right(value) =>
+//            value.as[NyTimesErrorResponse]
+//            new Outputs {}
+//              .BadRequest(e.asInstanceOf[Exception])
+//
+//        }
+
+      }
       case e: Exception => {
         println(s"only gets here with message,${e.getMessage}")
         InternalServerError((e))
@@ -135,18 +154,15 @@ object AppServer extends IOApp with EndpointModule[IO] {
   }
   def handleApiException(apiException: ApiException) = {
     apiException match {
-      case AppGenericException(value, flags) =>
-        AppGenericException(value).getCause
-      case RateLimitException(message, _) =>
-        RateLimitException(message).getCause
-      case MissingQueryException(message, _) =>
-        MissingQueryException(message).getCause
-      case DisconnectionException(message, _) =>
-        DisconnectionException(message).getCause
-      case IllegalParamsException(message, _) =>
-        IllegalParamsException(message).getCause
-      case ApiAuthorizationException(message, _) =>
-        ApiAuthorizationException(message).getCause
+      case AppGenericException(value, _, flags) =>
+        new Outputs {}
+          .BadRequest(AppGenericException.asInstanceOf[Exception])
+      case RateLimitException(message, _, _) =>
+        new Outputs {}
+          .TooManyRequests(AppGenericException.asInstanceOf[Exception])
+      case ApiAuthorizationException(message, _, _) =>
+        new Outputs {}
+          .Unauthorized(AppGenericException.asInstanceOf[Exception])
     }
   }
 }

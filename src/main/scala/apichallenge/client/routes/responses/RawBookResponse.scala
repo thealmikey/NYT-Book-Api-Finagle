@@ -30,7 +30,7 @@ case class Reviews(
 )
 
 case class RawBookResponse(
-    status: Option[String],
+    status: String,
     copyright: Option[String],
     num_results: Option[Int],
     results: Option[List[RawBook]]

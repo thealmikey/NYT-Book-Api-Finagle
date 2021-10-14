@@ -9,6 +9,6 @@ case class Fault(
     detail: Detail
 )
 
-case class RateLimitResponse(
+case class NyTimesErrorResponse(
     fault: Fault
 )

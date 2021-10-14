@@ -1,6 +1,11 @@
 package apichallenge.client.services
 
-import apichallenge.client.routes.responses.{RawBook, RawBookResponse}
+import apichallenge.client.routes.responses.{
+  NyTimesErrorResponse,
+  RawBook,
+  RawBookResponse
+}
+import apichallenge.client.utils.Api
 import cats.data.EitherT
 import com.twitter.finagle.{Http, Service, ServiceFactory}
 import com.twitter.finagle.http.{Method, Request, RequestBuilder, Response}
@@ -13,9 +18,13 @@ import cats.data._
 import cats.effect.{ContextShift, IO}
 import cats.syntax.all._
 import apichallenge.server.utils.ApiExceptions.{
+  ApiAuthorizationException,
   ApiException,
-  AppGenericException
+  AppGenericException,
+  RateLimitException
 }
+import io.circe.syntax.EncoderOps
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -74,7 +83,10 @@ magic
         allBooksRequest.accept = "application/json"
 
         (for {
-          response <- EitherT.right(client(allBooksRequest).asScala(ec))
+          response <- EitherT.right(
+            client(allBooksRequest)
+              .asScala(ec)
+          )
           rawJson <-
             EitherT
               .fromEither[Future](parse(response.getContentString()))
@@ -85,7 +97,11 @@ magic
               .leftMap(failure => {
                 log.error("full message", failure.printStackTrace())
                 log.error(failure, "error parsing JSON to string")
-                AppGenericException("Error converting JSON proper")
+
+                AppGenericException(
+                  "Error converting JSON proper",
+                  new Throwable("Error parsing JSON, API may have changed")
+                )
                 //                (0, Option(List.empty[RawBook]))
               })
           booksRes <-
@@ -100,7 +116,11 @@ magic
               )
               .leftMap(failure => {
                 log.error(failure, "error parsing JSON into BooksResponse")
-                AppGenericException("error parsing JSON into BooksResponse")
+                createApiException(
+                  response.statusCode,
+                  makeExceptionJsonFromResponse(response)
+                )
+//                AppGenericException(value.asJson.toString())
                 //                throw mapExceptions(response)
                 //                (0, Option(List.empty[RawBook]))
               })
@@ -109,4 +129,27 @@ magic
       }
     }
   }
+  def createApiException(code: Int, message: String): ApiException = {
+    code match {
+      case 429 => RateLimitException(message, new Throwable(message))
+      case 403 => ApiAuthorizationException(message, new Throwable(message))
+    }
+  }
+
+  def makeExceptionJsonFromResponse(res: Response): String = {
+    parse(res.getContentString()) match {
+      case Left(value) =>
+        "Got something from API not mappable to common errors "
+      case Right(value) =>
+        val rawJson = value
+          .as[NyTimesErrorResponse]
+          .toOption
+          .get
+          .fault
+          .asJsonObject
+          .toString()
+        rawJson
+    }
+  }
+
 }
