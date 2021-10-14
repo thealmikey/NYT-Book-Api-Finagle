@@ -1,7 +1,7 @@
 //package apichallenge.client.utils
 //
 //import com.twitter.finagle.http.Response
-//import com.twitter.finagle.service.{ReqRep, ResponseClassifier}
+//import com.twitter.finagle.service.{ReqRep, ResponseClass, ResponseClassifier}
 //import io.circe.Decoder.Result
 //import io.circe.{Decoder, Encoder, HCursor, Json}
 //import org.joda.time.DateTime
@@ -17,7 +17,10 @@
 //  val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 //  val responseClassifier =
 //    ResponseClassifier.named("NytimesResponseClasssifier") {
-//      case ReqRep(_, res: Response) => ResponseClass.RetryableFailure
+//      case ReqRep(_, res: Response) =>{
+//        if(res.statusCode == 403)
+//        ResponseClass.NonRetryableFailure
+//      } 
 //      case ReqRep(_, Throw(Failure(Some(_: UtilTimeoutException)))) =>
 //        ResponseClass.RetryableFailure
 //      case ReqRep(_, Throw(_: TimeoutException)) =>

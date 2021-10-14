@@ -51,11 +51,17 @@ import apichallenge.client.services.NyTimesService
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
+  val prod = None
+
   val config = ConfigSource.default.load[AppServerConf]
+
   val configOption = config.toOption
-  val apiKey = configOption.map(_.nyTimesKey.key).getOrElse("")
+  val apiKey = configOption.map(_.nytApiKey.key).getOrElse("")
+  println("The api key is", apiKey)
   val redisUrl: String =
-    configOption.flatMap(_.redis.host).getOrElse("redis://localhost")
+    prod
+      .flatMap(_ => configOption.map(_.redis.host))
+      .getOrElse("redis://localhost")
 
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 

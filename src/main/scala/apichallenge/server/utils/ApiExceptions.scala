@@ -1,8 +1,10 @@
 package apichallenge.server.utils
 
-import com.twitter.finagle.FailureFlags
+import com.twitter.finagle.{Failure, FailureFlags}
 
 object ApiExceptions {
+
+//  val ff = Failure.ada
 
   sealed trait ApiException
   case class RateLimitException(
