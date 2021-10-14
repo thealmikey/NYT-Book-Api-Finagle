@@ -41,11 +41,9 @@ class NyTimesService(
   /*
 This method uses Finagle Client to get data from the API.
 We model the return as an IO[Either[ApiException,(Int,Option[List[RawBook]])]
-
 We model using IO to easily compose with other parts of the system in this case Redis.
 IO also enables us to easily lift values without worrying about order of events and
 synchronity issues. No need for Awaits with finite durations all over the place.
-
 We model using Either as our request can fail or an operation after fetching, such as Deserializing
 data can fail.
 We model the data from the API using Option, this shows that we might succeed at hitting the endpoint
@@ -120,7 +118,7 @@ magic
                   response.statusCode,
                   makeExceptionJsonFromResponse(response)
                 )
-//                AppGenericException(value.asJson.toString())
+                //                AppGenericException(value.asJson.toString())
                 //                throw mapExceptions(response)
                 //                (0, Option(List.empty[RawBook]))
               })

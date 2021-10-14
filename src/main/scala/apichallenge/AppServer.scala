@@ -4,11 +4,12 @@ import apichallenge.client.routes.responses.NyTimesErrorResponse
 import apichallenge.client.utils.Api
 import apichallenge.server.models.{
   AuthorDateSearchParam,
-  RawAuthorDateSearchResults
+  RawAuthorDateSearchResults,
+  User
 }
 import apichallenge.server.redis.{AuthorBookRedisStore, RedisJsonCache}
 import apichallenge.server.routes.AuthorDateBookSearchValidation
-import apichallenge.server.services.AuthorBookService
+import apichallenge.server.services.{AuthorBookService, RedisUserDataHandler}
 import apichallenge.server.utils.ApiExceptions.{
   ApiAuthorizationException,
   ApiException,
@@ -18,10 +19,13 @@ import apichallenge.server.utils.ApiExceptions.{
 import apichallenge.shared.config.AppServerConf
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
 import cats.effect.IO.ioEffect
+import com.twitter.finagle.OAuth2.{authorize, issueAccessToken}
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.Status.BadRequest
 import com.twitter.finagle.http.service.HttpResponseClassifier
 import com.twitter.finagle.http.{Request, Response}
+import com.twitter.finagle.oauth2.{AuthInfo, GrantResult}
+import com.twitter.util.Future
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import eu.timepit.refined.api.Refined
@@ -29,6 +33,7 @@ import io.circe.parser
 import io.finch.{
   Application,
   Bootstrap,
+  Endpoint,
   EndpointModule,
   InternalServerError,
   Ok,
@@ -38,6 +43,7 @@ import io.finch.{
 }
 import pureconfig.ConfigConvert.fromReaderAndWriter
 import pureconfig.ConfigSource
+import shapeless.HList.ListCompat.::
 
 import scala.util.{Failure, Success}
 //import io.finch._
@@ -52,8 +58,18 @@ import eu.timepit.refined.string._
 import pureconfig.generic.auto._
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.utils.util._
+import apichallenge.server.utils.util._
 
 object AppServer extends IOApp with EndpointModule[IO] {
+//  def authInfo(
+//      redisDataHandler: RedisUserDataHandler
+//  ) =
+//    authorize[User](redisDataHandler)
+
+//  def accessToken(
+//      redisDataHandler: RedisUserDataHandler
+//  ): Endpoint[IO, GrantResult] =
+//    issueAccessToken[User](redisDataHandler)
 
   val prod = None
 
@@ -72,14 +88,19 @@ object AppServer extends IOApp with EndpointModule[IO] {
   val authorBookServiceResource =
     for {
       client <- RedisClient[IO].from(redisUrl)
-      redis <-
+      redisForBooks <-
         RedisJsonCache
           .createServer[AuthorDateSearchParam, RawAuthorDateSearchResults](
             client
           )
+      redisForUsers <-
+        RedisJsonCache
+          .createServer[User, GrantResult](
+            client
+          )
 
     } yield new AuthorBookService(
-      new AuthorBookRedisStore(redis),
+      new AuthorBookRedisStore(redisForBooks),
       new NyTimesService(apiKey = apiKey)
     )
 
@@ -142,15 +163,6 @@ object AppServer extends IOApp with EndpointModule[IO] {
             Unauthorized(AppGenericException.asInstanceOf[Exception])
 
         }
-//        parser.parse(e.getMessage) match {
-//          case Left(value) =>
-//            new Outputs {}.BadRequest(e.asInstanceOf[Exception])
-//          case Right(value) =>
-//            value.as[NyTimesErrorResponse]
-//            new Outputs {}
-//              .BadRequest(e.asInstanceOf[Exception])
-//
-//        }
 
       }
       case e: Exception => {
@@ -159,7 +171,8 @@ object AppServer extends IOApp with EndpointModule[IO] {
       }
     }
   }
-  def handleApiException(apiException: ApiException) = {
-    apiException
-  }
+//  def handleApiException(apiException: ApiException) = {
+//    apiException
+//  }
+
 }

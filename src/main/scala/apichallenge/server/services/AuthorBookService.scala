@@ -243,7 +243,8 @@ class AuthorBookService(
         val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
         val oldestPublishDate = rankHistory
           .map(rank => formatter.parseDateTime(rank.published_date.get))
-          .sortBy(_.getMillis)
+          .map(_.getMillis)
+          .sortWith(_ < _)
           .map(formatter.print(_))
           .headOption
         oldestPublishDate

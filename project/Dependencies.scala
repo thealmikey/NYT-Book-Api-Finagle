@@ -19,6 +19,8 @@ object Dependencies {
     val Zio = "2.0.0-M2+139-8caf95dd-SNAPSHOT"
     val FastParse = "2.2.2"
     val PureConfig = "0.17.0"
+    val FinagleOauth = "19.8.0"
+    val TaglessSecurity = "0.0.1-M11"
   }
 
   object Libs {
@@ -73,6 +75,13 @@ object Dependencies {
     val PureConfig =
       "com.github.pureconfig" %% "pureconfig" % Versions.PureConfig
 
+    val FinagleOauth =
+      "com.github.finagle" %% "finagle-oauth2" % Versions.FinagleOauth
+
+    val TaglessSecurityCommon =
+      "io.github.jmcardon" %% "tsec-common" % Versions.TaglessSecurity
+    val TaglessSecurityPassword =
+      "io.github.jmcardon" %% "tsec-password" % Versions.TaglessSecurity
   }
 
 }

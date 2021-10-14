@@ -33,7 +33,10 @@ libraryDependencies ++= Seq(
   Libs.FastParse,
   Libs.CirceRefined,
   Libs.CirceGenericExtras,
-  Libs.PureConfig
+  Libs.PureConfig,
+  Libs.FinagleOauth,
+  Libs.TaglessSecurityCommon,
+  Libs.TaglessSecurityPassword
 )
 dockerBaseImage := "openjdk:jre-alpine"
 dockerRepository := Some("thealmikey")
