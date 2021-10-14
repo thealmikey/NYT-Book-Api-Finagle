@@ -51,7 +51,7 @@ import eu.timepit.refined.generic._
 import eu.timepit.refined.string._
 import pureconfig.generic.auto._
 import apichallenge.client.services.NyTimesService
-import apichallenge.server.utils._
+import apichallenge.server.utils.util._
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
@@ -134,7 +134,14 @@ object AppServer extends IOApp with EndpointModule[IO] {
         .map(Ok)
     }.handle {
       case e: ApiException => {
-        handleApiException(e)
+//        Unauthorized(e.asInstanceOf[Exception])
+        e match {
+          case RateLimitException(message, _, _) =>
+            TooManyRequests(AppGenericException.asInstanceOf[Exception])
+          case ApiAuthorizationException(message, _, _) =>
+            Unauthorized(AppGenericException.asInstanceOf[Exception])
+
+        }
 //        parser.parse(e.getMessage) match {
 //          case Left(value) =>
 //            new Outputs {}.BadRequest(e.asInstanceOf[Exception])
@@ -153,16 +160,6 @@ object AppServer extends IOApp with EndpointModule[IO] {
     }
   }
   def handleApiException(apiException: ApiException) = {
-    apiException match {
-      case AppGenericException(value, _, flags) =>
-        new Outputs {}
-          .BadRequest(AppGenericException.asInstanceOf[Exception])
-      case RateLimitException(message, _, _) =>
-        new Outputs {}
-          .TooManyRequests(AppGenericException.asInstanceOf[Exception])
-      case ApiAuthorizationException(message, _, _) =>
-        new Outputs {}
-          .Unauthorized(AppGenericException.asInstanceOf[Exception])
-    }
+    apiException
   }
 }
