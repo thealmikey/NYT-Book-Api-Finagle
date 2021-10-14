@@ -1,6 +1,5 @@
 package apichallenge
 
-import apichallenge.client.services.NyTimesService
 import apichallenge.server.models.{
   AuthorDateSearchParam,
   RawAuthorDateSearchResults
@@ -17,12 +16,12 @@ import apichallenge.server.utils.ApiExceptions.{
   MissingQueryException,
   RateLimitException
 }
-import apichallenge.server.utils.DateUtil.Date
-import apichallenge.server.utils.DateUtil.Date._
+import apichallenge.shared.config.AppServerConf
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
 import cats.effect.IO.ioEffect
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.Status.BadRequest
+import com.twitter.finagle.http.service.HttpResponseClassifier
 import com.twitter.finagle.http.{Request, Response}
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
@@ -34,25 +33,35 @@ import io.finch.{
   InternalServerError,
   Ok
 }
+import pureconfig.ConfigConvert.fromReaderAndWriter
+import pureconfig.ConfigSource
 
 import scala.util.{Failure, Success}
 //import io.finch._
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.twitter.finagle.Http
+import com.twitter.finagle._
 import io.finch.circe._
 import io.circe.generic.auto._
 import eu.timepit.refined._
 import eu.timepit.refined.auto._
 import eu.timepit.refined.generic._
 import eu.timepit.refined.string._
+import pureconfig.generic.auto._
+import apichallenge.client.services.NyTimesService
 
 object AppServer extends IOApp with EndpointModule[IO] {
+
+  val config = ConfigSource.default.load[AppServerConf]
+  val configOption = config.toOption
+  val apiKey = configOption.map(_.nyTimesKey.key).getOrElse("")
+  val redisUrl: String =
+    configOption.flatMap(_.redis.host).getOrElse("redis://localhost")
 
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
   val authorBookServiceResource =
     for {
-      client <- RedisClient[IO].from("redis://goodcache")
+      client <- RedisClient[IO].from(redisUrl)
       redis <-
         RedisJsonCache
           .createServer[AuthorDateSearchParam, RawAuthorDateSearchResults](
@@ -61,7 +70,7 @@ object AppServer extends IOApp with EndpointModule[IO] {
 
     } yield new AuthorBookService(
       new AuthorBookRedisStore(redis),
-      new NyTimesService()
+      new NyTimesService(apiKey = apiKey)
     )
 
   val createApp = for {
@@ -75,7 +84,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
           .toService
       )
     )
-  } yield Http.serve(":8080", services)
+  } yield Http.server.withHttpStats
+    .withResponseClassifier(HttpResponseClassifier.ServerErrorsAsFailures)
+    .serve(":8080", services)
 
   override def run(args: List[String]): IO[ExitCode] =
     createApp.use(_ => IO.never).as(ExitCode.Success)

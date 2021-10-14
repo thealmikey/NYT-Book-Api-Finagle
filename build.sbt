@@ -32,7 +32,8 @@ libraryDependencies ++= Seq(
   Libs.Shapeless,
   Libs.FastParse,
   Libs.CirceRefined,
-  Libs.CirceGenericExtras
+  Libs.CirceGenericExtras,
+  Libs.PureConfig
 )
 dockerBaseImage := "openjdk:jre-alpine"
 dockerRepository := Some("thealmikey")

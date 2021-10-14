@@ -1,6 +1,5 @@
 package apichallenge.client.services
 
-import apichallenge.client.routes.NyTimes.apiKey
 import apichallenge.client.routes.responses.{RawBook, RawBookResponse}
 import cats.data.EitherT
 import com.twitter.finagle.{Http, Service, ServiceFactory}
@@ -13,7 +12,6 @@ import cats.implicits._
 import cats.data._
 import cats.effect.{ContextShift, IO}
 import cats.syntax.all._
-
 import apichallenge.server.utils.ApiExceptions.{
   ApiException,
   AppGenericException
@@ -23,8 +21,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class NyTimesService(
     val client: Service[Request, Response] = Http
-      .newService("api.nytimes.com:80")
+      .newService("api.nytimes.com:80"),
+    val apiKey: String = ""
 ) {
+
   implicit val ec = ExecutionContext.global
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
@@ -52,11 +52,14 @@ magic
       IO {
         val allBooksUrl = s"/svc/books/v3/lists/best-sellers/history.json"
         val paramStr =
-          Map("api-key" -> apiKey, "author" -> authorName, "offset" -> offset)
-            .map {
-              case (k, v) =>
-                k + '=' + v
-            } mkString ("?", "&", "")
+          Map(
+            "api-key" -> apiKey,
+            "author" -> authorName,
+            "offset" -> offset
+          ).map {
+            case (k, v) =>
+              k + '=' + v
+          } mkString ("?", "&", "")
 
         val allBooksRequest = RequestBuilder.safeBuildGet(
           RequestBuilder
@@ -106,5 +109,4 @@ magic
       }
     }
   }
-
 }

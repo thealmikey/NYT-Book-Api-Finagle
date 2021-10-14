@@ -18,6 +18,7 @@ object Dependencies {
     val Logback = "1.2.3"
     val Zio = "2.0.0-M2+139-8caf95dd-SNAPSHOT"
     val FastParse = "2.2.2"
+    val PureConfig = "0.17.0"
   }
 
   object Libs {
@@ -68,6 +69,9 @@ object Dependencies {
     val Zio = "dev.zio" %% "zio" % Versions.Zio
 
     val FastParse = "com.lihaoyi" %% "fastparse" % Versions.FastParse
+
+    val PureConfig =
+      "com.github.pureconfig" %% "pureconfig" % Versions.PureConfig
 
   }
 

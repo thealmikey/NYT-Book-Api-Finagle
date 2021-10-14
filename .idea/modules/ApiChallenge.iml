@@ -12,7 +12,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="sbt: co.fs2:fs2-core_2.12:1.0.2:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.chuusai:shapeless_2.12:2.3.3:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.chuusai:shapeless_2.12:2.3.7:jar" level="project" />
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-annotations:2.9.10:jar" level="project" />
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-core:2.9.10:jar" level="project" />
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-databind:2.9.10.1:jar" level="project" />
@@ -23,6 +23,10 @@
     <orderEntry type="library" name="sbt: com.github.finagle:finchx-core_2.12:0.31.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.finagle:finchx-generic_2.12:0.31.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.julien-truffaut:monocle-core_2.12:2.0.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig-core_2.12:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig-generic-base_2.12:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig-generic_2.12:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig_2.12:0.17.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.google.code.findbugs:jsr305:2.0.1:jar" level="project" />
     <orderEntry type="library" name="sbt: com.google.errorprone:error_prone_annotations:2.3.3:jar" level="project" />
     <orderEntry type="library" name="sbt: com.lihaoyi:fastparse_2.12:2.2.2:jar" level="project" />
@@ -50,6 +54,7 @@
     <orderEntry type="library" name="sbt: com.twitter:util-security_2.12:20.1.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.twitter:util-stats_2.12:20.1.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.twitter:util-tunable_2.12:20.1.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.typesafe:config:1.4.1:jar" level="project" />
     <orderEntry type="library" name="sbt: dev.profunktor:redis4cats-core_2.12:0.10.3:jar" level="project" />
     <orderEntry type="library" name="sbt: dev.profunktor:redis4cats-effects_2.12:0.10.3:jar" level="project" />
     <orderEntry type="library" name="sbt: eu.timepit:refined-cats_2.12:0.9.17:jar" level="project" />
@@ -97,7 +102,6 @@
     <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_2.12:2.2.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-macros_2.12:2.1.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:jawn-parser_2.12:1.0.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.typelevel:macro-compat_2.12:1.1.1:jar" level="project" />
     <orderEntry type="module-library">
       <library name="sbt: unmanaged-sources-and-docs">
         <CLASSES />
