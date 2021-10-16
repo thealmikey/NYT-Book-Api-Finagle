@@ -3,9 +3,11 @@ package apichallenge
 import apichallenge.client.routes.responses.NyTimesErrorResponse
 import apichallenge.client.utils.Api
 import apichallenge.server.models.{
+  ApiClient,
   AuthorDateSearchParam,
   RawAuthorDateSearchResults,
-  User
+  User,
+  UserHashed
 }
 import apichallenge.server.redis.{AuthorBookRedisStore, RedisJsonCache}
 import apichallenge.server.routes.AuthorDateBookSearchValidation
@@ -24,8 +26,9 @@ import com.twitter.finagle.Service
 import com.twitter.finagle.http.Status.BadRequest
 import com.twitter.finagle.http.service.HttpResponseClassifier
 import com.twitter.finagle.http.{Request, Response}
-import com.twitter.finagle.oauth2.{AuthInfo, GrantResult}
+import com.twitter.finagle.oauth2.{AccessToken, AuthInfo, GrantResult}
 import com.twitter.util.Future
+import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import eu.timepit.refined.api.Refined
@@ -51,25 +54,27 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.twitter.finagle._
 import io.finch.circe._
 import io.circe.generic.auto._
-import eu.timepit.refined._
-import eu.timepit.refined.auto._
-import eu.timepit.refined.generic._
-import eu.timepit.refined.string._
+
 import pureconfig.generic.auto._
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.utils.util._
 import apichallenge.server.utils.util._
 
 object AppServer extends IOApp with EndpointModule[IO] {
-//  def authInfo(
+//  def authInfoFn(
 //      redisDataHandler: RedisUserDataHandler
 //  ) =
-//    authorize[User](redisDataHandler)
-
+//    authorize[AuthInfo[UserHashed]](redisDataHandler)
+//
 //  def accessToken(
 //      redisDataHandler: RedisUserDataHandler
 //  ): Endpoint[IO, GrantResult] =
-//    issueAccessToken[User](redisDataHandler)
+//    issueAccessToken[UserHashed](redisDataHandler)
+//
+//  def tokensFn(
+//      redisDataHandler: RedisUserDataHandler
+//  ): Endpoint[IO, GrantResult] =
+//    post("users" :: "auth" :: accessToken(redisDataHandler))
 
   val prod = None
 
@@ -83,6 +88,13 @@ object AppServer extends IOApp with EndpointModule[IO] {
       .flatMap(_ => configOption.map(_.redis.host))
       .getOrElse("redis://localhost")
 
+//  var userHashTokenStore =
+//    RedisJsonCache.createServer[UserHashed, AccessToken] _
+//  var clientUserHashStore = RedisJsonCache.createServer[ApiClient, UserHashed] _
+//  var apiStringStore = RedisJsonCache.createServer[String, AccessToken] _
+//  var tokenUserStore = RedisJsonCache.createServer[String, UserHashed] _
+//  var apiUserStore = RedisJsonCache.createServer[User, UserHashed] _
+
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
   val authorBookServiceResource =
@@ -93,23 +105,35 @@ object AppServer extends IOApp with EndpointModule[IO] {
           .createServer[AuthorDateSearchParam, RawAuthorDateSearchResults](
             client
           )
-      redisForUsers <-
-        RedisJsonCache
-          .createServer[User, GrantResult](
-            client
-          )
 
     } yield new AuthorBookService(
       new AuthorBookRedisStore(redisForBooks),
       new NyTimesService(apiKey = apiKey)
     )
 
+//  val redisUserAuth = for {
+//    client <- RedisClient[IO].from(redisUrl)
+//    userHashToken <- userHashTokenStore(client)
+//    clientUserHash <- clientUserHashStore(client)
+//    apiString <- apiStringStore(client)
+//    tokenUser <- tokenUserStore(client)
+//    apiUser <- apiUserStore(client)
+//  } yield RedisUserDataHandler(
+//    userHashToken,
+//    clientUserHash,
+//    apiString,
+//    tokenUser,
+//    apiUser
+//  )
+
   val createApp = for {
     authorBookService <- authorBookServiceResource
+//    redisAuth <- redisUserAuth
     services <- Resource.liftF[IO, Service[Request, Response]](
       IO(
         Bootstrap
           .serve[Application.Json](
+//            tokensFn(redisAuth) :+:
             authorDateBookSearchEndpoint(authorBookService)
           )
           .toService
