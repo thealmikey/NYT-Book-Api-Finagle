@@ -1,7 +1,7 @@
 package apichallenge.server.models
 
 case class User(
-    name: String,
+    username: String,
     password: String
 )
 case class AuthorizationRequest(name: String, plainPassword: String)

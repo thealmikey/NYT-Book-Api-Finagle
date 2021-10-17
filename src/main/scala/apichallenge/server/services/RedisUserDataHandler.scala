@@ -34,19 +34,41 @@ case class RedisUserDataHandler(
 ) extends DataHandler[UserHashed] {
   implicit val ec: ExecutionContext = global
 
-  def createHashedUser(
+  def storeHashedUser(
       user: User
   ): Future[Option[UserHashed]] = {
     BCrypt
       .hashpw[IO](user.password)
       .flatMap { hash =>
-        var hashedUser = UserHashed(user.name, hash)
+        var hashedUser = UserHashed(user.username, hash)
         apiUserStore
-          .set(user, UserHashed(user.name, hash))
+          .set(user, UserHashed(user.username, hash))
           .as(Option(hashedUser))
       }
       .unsafeToFuture()
       .asTwitter
+  }
+
+  def createHashedUser(user: User) = {
+    BCrypt
+      .hashpw[IO](user.password)
+      .map { hash =>
+        var hashedUser = UserHashed(user.username, hash)
+        hashedUser
+      }
+  }
+
+  def createAuthInfo(userHashed: UserHashed): AuthInfo[UserHashed] = {
+    AuthInfo[UserHashed](
+      userHashed,
+      "",
+      None,
+      None
+    )
+  }
+
+  def findTheAccessToken(token: String): Option[AccessToken] = {
+    apiStringStore.get(token).unsafeRunSync()
   }
 
   def createAccessToken(authInfo: AuthInfo[UserHashed]): Future[AccessToken] =
@@ -61,6 +83,10 @@ case class RedisUserDataHandler(
     }.flatMap { token =>
       redis
         .set(authInfo.user, token)
+        .as(token)
+        .flatMap { token =>
+          apiStringStore.set(token.token, token)
+        }
         .as(token)
         .unsafeToFuture()
         .asTwitter
@@ -211,7 +237,7 @@ case class RedisUserDataHandler(
   def registerUser(name: String, password: String): Future[Option[String]] = {
     var user = User(name, password)
     var token = makeToken
-    createHashedUser(user).flatMap { hashedUser =>
+    storeHashedUser(user).flatMap { hashedUser =>
       hashedUser match {
         case Some(value) =>
           tokenUserRedis

@@ -21,7 +21,7 @@ import apichallenge.server.utils.ApiExceptions.{
 import apichallenge.shared.config.AppServerConf
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
 import cats.effect.IO.ioEffect._
-import com.twitter.finagle.{Service, http}
+import com.twitter.finagle.{Service, http, _}
 import io.finch.catsEffect._
 import com.twitter.finagle.http.Status.BadRequest
 import com.twitter.finagle.http.service.HttpResponseClassifier
@@ -39,10 +39,13 @@ import io.finch.{
   Bootstrap,
   Endpoint,
   EndpointModule,
+  Input,
   InternalServerError,
   Ok,
+  Output,
   Outputs,
   TooManyRequests,
+  Trace,
   Unauthorized
 }
 import pureconfig.ConfigConvert.fromReaderAndWriter
@@ -53,7 +56,6 @@ import scala.util.{Failure, Success}
 import io.finch.catsEffect._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.twitter.finagle._
 import io.finch.circe._
 import io.circe._
 import io.circe.generic.semiauto._
@@ -81,13 +83,82 @@ object AppServer extends IOApp with EndpointModule[IO] {
 
   def accessToken(
       redisDataHandler: DataHandler[UserHashed]
-  ) =
+  ): Endpoint[IO, GrantResult] =
     issueAccessToken[IO, UserHashed](redisDataHandler)
 
   def tokensFn(
       redisDataHandler: RedisUserDataHandler
   ) =
     post("users" :: "auth" :: accessToken(redisDataHandler))
+
+  def registerFn(
+      redisDataHandler: RedisUserDataHandler
+  ) =
+    post("register" :: body[User, Application.Json]).mapOutputAsync { user =>
+      IO.fromFuture {
+        IO {
+          redisDataHandler
+            .storeHashedUser(user)
+            .flatMap { userHashed =>
+              redisDataHandler.createAccessToken(
+                redisDataHandler.createAuthInfo(userHashed.get)
+              )
+            }
+            .map(Ok(_))
+            .asScala
+        }
+      }
+    }
+
+  def auth(
+      compiled: Endpoint.Compiled[IO],
+      redisDataHandler: RedisUserDataHandler
+  ): Endpoint.Compiled[IO] = {
+    var authService = authInfoFn(redisDataHandler).toService
+    Endpoint.Compiled[IO] {
+      case req => {
+
+        if (
+          req.uri.contains("auth") || req.uri.contains("login") || req.uri
+            .contains("register")
+        ) {
+          compiled(req)
+        } else {
+          redisDataHandler.findTheAccessToken(
+            req.wwwAuthenticate.getOrElse("")
+          ) match {
+            case Some(value) => {
+              println(
+                s"Got the code from the data handler,what we got in browser,${req.wwwAuthenticate.getOrElse("")}"
+              )
+              compiled(req)
+
+            }
+            case None => {
+              println(
+                s"DIDNT GET the code from the data handler,what we got in browser,${req.wwwAuthenticate
+                  .getOrElse("")}"
+              )
+              IO.pure(Trace.empty -> Right(Response(http.Status.Unauthorized)))
+            }
+          }
+        }
+      }
+      case _ => {
+        println("Something else but we didn even check the backend")
+        IO.pure(Trace.empty -> Right(Response(http.Status.Unauthorized)))
+      }
+
+    }
+  }
+
+//  def loginFn(redisDataHandler: RedisUserDataHandler) =
+//    post("login" :: body[User, Application.Json]).map({ user =>
+//     redisDataHandler.createHashedUser(user).flatMap{
+//
+//     }
+//      issueAccessToken(redisDataHandler)
+//    })
 
   val prod = None
 
@@ -144,12 +215,18 @@ object AppServer extends IOApp with EndpointModule[IO] {
     redisAuth <- redisUserAuth
     services <- Resource.liftF[IO, Service[Request, Response]](
       IO(
-        Bootstrap
-          .serve[Application.Json](
-            tokensFn(redisAuth) :+:
-              authorDateBookSearchEndpoint(authorBookService)
+        Endpoint.toService(
+          auth(
+            Bootstrap
+              .serve[Application.Json](
+                registerFn(redisAuth) :+:
+                  tokensFn(redisAuth) :+:
+                  authorDateBookSearchEndpoint(authorBookService)
+              )
+              .compile,
+            redisAuth
           )
-          .toService
+        )
       )
     )
   } yield Http.server.withHttpStats
@@ -160,7 +237,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
   override def run(args: List[String]): IO[ExitCode] =
     createApp.use(_ => IO.never).as(ExitCode.Success)
 
-  def authorDateBookSearchEndpoint(authorBookService: AuthorBookService) = {
+  def authorDateBookSearchEndpoint(
+      authorBookService: AuthorBookService
+  ) = {
     get(
       "me" :: "books" :: "list" :: param[String]("author") :: params[String](
         "year"
