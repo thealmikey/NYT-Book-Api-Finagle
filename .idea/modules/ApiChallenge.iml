@@ -12,7 +12,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="sbt: co.fs2:fs2-core_2.12:1.0.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: co.fs2:fs2-core_2.12:2.2.2:jar" level="project" />
     <orderEntry type="library" name="sbt: co.fs2:fs2-io_2.12:0.10.3:jar" level="project" />
     <orderEntry type="library" name="sbt: com.chuusai:shapeless_2.12:2.3.7:jar" level="project" />
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-annotations:2.9.10:jar" level="project" />
@@ -22,9 +22,10 @@
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.module:jackson-module-scala_2.12:2.9.10:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.ben-manes.caffeine:caffeine:2.8.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.finagle:finagle-oauth2_2.12:19.8.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.github.finagle:finchx-circe_2.12:0.31.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.github.finagle:finchx-core_2.12:0.31.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.github.finagle:finchx-generic_2.12:0.31.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.finagle:finchx-circe_2.12:0.32.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.finagle:finchx-core_2.12:0.32.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.finagle:finchx-generic_2.12:0.32.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.github.finagle:finchx-oauth2_2.12:0.28.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.julien-truffaut:monocle-core_2.12:2.0.1:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig-core_2.12:0.17.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.github.pureconfig:pureconfig-generic-base_2.12:0.17.0:jar" level="project" />
@@ -37,27 +38,27 @@
     <orderEntry type="library" name="sbt: com.lihaoyi:geny_2.12:0.4.2:jar" level="project" />
     <orderEntry type="library" name="sbt: com.lihaoyi:sourcecode_2.12:0.1.7:jar" level="project" />
     <orderEntry type="library" name="sbt: com.thoughtworks.paranamer:paranamer:2.8:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-base-http_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-core_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-http2_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-http_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-init_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-netty4-http_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-netty4_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:finagle-toggle_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-app_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-cache_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-codec_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-core_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-function_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-hashing_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-jvm_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-lint_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-logging_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-registry_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-security_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-stats_2.12:20.1.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: com.twitter:util-tunable_2.12:20.1.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-base-http_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-core_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-http2_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-http_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-init_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-netty4-http_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-netty4_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:finagle-toggle_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-app_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-cache_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-codec_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-core_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-function_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-hashing_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-jvm_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-lint_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-logging_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-registry_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-security_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-stats_2.12:20.3.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-tunable_2.12:20.3.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.typesafe:config:1.4.1:jar" level="project" />
     <orderEntry type="library" name="sbt: commons-codec:commons-codec:1.11:jar" level="project" />
     <orderEntry type="library" name="sbt: dev.profunktor:redis4cats-core_2.12:0.10.3:jar" level="project" />
@@ -65,10 +66,10 @@
     <orderEntry type="library" name="sbt: eu.timepit:refined-cats_2.12:0.9.17:jar" level="project" />
     <orderEntry type="library" name="sbt: eu.timepit:refined_2.12:0.9.17:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-core_2.12:0.13.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: io.circe:circe-fs2_2.12:0.11.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-fs2_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-generic-extras_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-generic_2.12:0.13.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: io.circe:circe-iteratee_2.12:0.12.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-iteratee_2.12:0.13.0-M2:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-jawn_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-numbers_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-optics_2.12:0.13.0:jar" level="project" />
@@ -76,7 +77,7 @@
     <orderEntry type="library" name="sbt: io.circe:circe-refined_2.12:0.13.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.github.jmcardon:tsec-common_2.12:0.0.1-M11:jar" level="project" />
     <orderEntry type="library" name="sbt: io.github.jmcardon:tsec-password_2.12:0.0.1-M11:jar" level="project" />
-    <orderEntry type="library" name="sbt: io.iteratee:iteratee-core_2.12:0.18.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.iteratee:iteratee-core_2.12:0.19.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.lettuce:lettuce-core:5.3.4.RELEASE:jar" level="project" />
     <orderEntry type="library" name="sbt: io.netty:netty-buffer:4.1.52.Final:jar" level="project" />
     <orderEntry type="library" name="sbt: io.netty:netty-codec-http2:4.1.43.Final:jar" level="project" />
@@ -102,7 +103,7 @@
     <orderEntry type="library" name="sbt: org.scala-lang:scala-compiler:2.12.8:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.12.8:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-reflect:2.12.8:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scodec:scodec-bits_2.12:1.1.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scodec:scodec-bits_2.12:1.1.12:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-core_2.12:2.2.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-effect_2.12:2.2.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-free_2.12:2.1.0:jar" level="project" />

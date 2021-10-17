@@ -8,7 +8,7 @@ object Dependencies {
     val Circe = "0.13.0"
     val KindProjector = "0.11.0"
     val finagle = "20.1.0"
-    val finch = "0.31.0"
+    val finch = "0.32.1"
     val Redis4Cats = "0.10.3"
     val Refined = "0.9.17"
     val JodaTime = "2.10.12"
@@ -21,6 +21,7 @@ object Dependencies {
     val PureConfig = "0.17.0"
     val FinagleOauth = "19.8.0"
     val TaglessSecurity = "0.0.1-M11"
+    val FinchOauth = "0.28.0"
   }
 
   object Libs {
@@ -77,6 +78,9 @@ object Dependencies {
 
     val FinagleOauth =
       "com.github.finagle" %% "finagle-oauth2" % Versions.FinagleOauth
+
+    val FinchOauth =
+      "com.github.finagle" %% "finchx-oauth2" % Versions.FinchOauth
 
     val TaglessSecurityCommon =
       "io.github.jmcardon" %% "tsec-common" % Versions.TaglessSecurity

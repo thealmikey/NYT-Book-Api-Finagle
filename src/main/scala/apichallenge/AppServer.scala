@@ -20,19 +20,20 @@ import apichallenge.server.utils.ApiExceptions.{
 }
 import apichallenge.shared.config.AppServerConf
 import cats.effect.{ContextShift, ExitCode, IO, IOApp, Resource}
-import cats.effect.IO.ioEffect
-import com.twitter.finagle.OAuth2.{authorize, issueAccessToken}
-import com.twitter.finagle.Service
+import cats.effect.IO.ioEffect._
+import com.twitter.finagle.{Service, http}
+import io.finch.catsEffect._
 import com.twitter.finagle.http.Status.BadRequest
 import com.twitter.finagle.http.service.HttpResponseClassifier
-import com.twitter.finagle.http.{Request, Response}
-import com.twitter.finagle.oauth2.{AccessToken, AuthInfo, GrantResult}
+import com.twitter.finagle.http.{Request, Response, Version}
+import com.twitter.finagle.oauth2._
 import com.twitter.util.Future
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import eu.timepit.refined.api.Refined
 import io.circe.parser
+import io.finch.oauth2.{authorize, issueAccessToken}
 import io.finch.{
   Application,
   Bootstrap,
@@ -49,32 +50,44 @@ import pureconfig.ConfigSource
 import shapeless.HList.ListCompat.::
 
 import scala.util.{Failure, Success}
-//import io.finch._
+import io.finch.catsEffect._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.twitter.finagle._
 import io.finch.circe._
+import io.circe._
+import io.circe.generic.semiauto._
 import io.circe.generic.auto._
-
 import pureconfig.generic.auto._
+import cats.syntax.all._
+import io.circe.syntax._
 import apichallenge.client.services.NyTimesService
 import apichallenge.server.utils.util._
 import apichallenge.server.utils.util._
 
+import java.util.Date
+
 object AppServer extends IOApp with EndpointModule[IO] {
-//  def authInfoFn(
-//      redisDataHandler: RedisUserDataHandler
-//  ) =
-//    authorize[AuthInfo[UserHashed]](redisDataHandler)
-//
-//  def accessToken(
-//      redisDataHandler: RedisUserDataHandler
-//  ): Endpoint[IO, GrantResult] =
-//    issueAccessToken[UserHashed](redisDataHandler)
-//
-//  def tokensFn(
-//      redisDataHandler: RedisUserDataHandler
-//  ): Endpoint[IO, GrantResult] =
-//    post("users" :: "auth" :: accessToken(redisDataHandler))
+
+  implicit val dateEncoder: Encoder[Date] =
+    Encoder[Long].contramap[Date](d ⇒ d.getTime)
+  implicit val dateDecoder: Decoder[Date] =
+    Decoder.instance(a => a.as[Long].map(new Date(_)))
+
+  def authInfoFn(
+      redisDataHandler: DataHandler[UserHashed]
+  ) =
+    authorize[IO, UserHashed](redisDataHandler)
+
+  def accessToken(
+      redisDataHandler: DataHandler[UserHashed]
+  ) =
+    issueAccessToken[IO, UserHashed](redisDataHandler)
+
+  def tokensFn(
+      redisDataHandler: RedisUserDataHandler
+  ) =
+    post("users" :: "auth" :: accessToken(redisDataHandler))
 
   val prod = None
 
@@ -88,12 +101,12 @@ object AppServer extends IOApp with EndpointModule[IO] {
       .flatMap(_ => configOption.map(_.redis.host))
       .getOrElse("redis://localhost")
 
-//  var userHashTokenStore =
-//    RedisJsonCache.createServer[UserHashed, AccessToken] _
-//  var clientUserHashStore = RedisJsonCache.createServer[ApiClient, UserHashed] _
-//  var apiStringStore = RedisJsonCache.createServer[String, AccessToken] _
-//  var tokenUserStore = RedisJsonCache.createServer[String, UserHashed] _
-//  var apiUserStore = RedisJsonCache.createServer[User, UserHashed] _
+  var userHashTokenStore =
+    RedisJsonCache.createServer[UserHashed, AccessToken] _
+  var clientUserHashStore = RedisJsonCache.createServer[ApiClient, UserHashed] _
+  var apiStringStore = RedisJsonCache.createServer[String, AccessToken] _
+  var tokenUserStore = RedisJsonCache.createServer[String, UserHashed] _
+  var apiUserStore = RedisJsonCache.createServer[User, UserHashed] _
 
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
@@ -111,30 +124,30 @@ object AppServer extends IOApp with EndpointModule[IO] {
       new NyTimesService(apiKey = apiKey)
     )
 
-//  val redisUserAuth = for {
-//    client <- RedisClient[IO].from(redisUrl)
-//    userHashToken <- userHashTokenStore(client)
-//    clientUserHash <- clientUserHashStore(client)
-//    apiString <- apiStringStore(client)
-//    tokenUser <- tokenUserStore(client)
-//    apiUser <- apiUserStore(client)
-//  } yield RedisUserDataHandler(
-//    userHashToken,
-//    clientUserHash,
-//    apiString,
-//    tokenUser,
-//    apiUser
-//  )
+  val redisUserAuth = for {
+    client <- RedisClient[IO].from(redisUrl)
+    userHashToken <- userHashTokenStore(client)
+    clientUserHash <- clientUserHashStore(client)
+    apiString <- apiStringStore(client)
+    tokenUser <- tokenUserStore(client)
+    apiUser <- apiUserStore(client)
+  } yield RedisUserDataHandler(
+    userHashToken,
+    clientUserHash,
+    apiString,
+    tokenUser,
+    apiUser
+  )
 
   val createApp = for {
     authorBookService <- authorBookServiceResource
-//    redisAuth <- redisUserAuth
+    redisAuth <- redisUserAuth
     services <- Resource.liftF[IO, Service[Request, Response]](
       IO(
         Bootstrap
           .serve[Application.Json](
-//            tokensFn(redisAuth) :+:
-            authorDateBookSearchEndpoint(authorBookService)
+            tokensFn(redisAuth) :+:
+              authorDateBookSearchEndpoint(authorBookService)
           )
           .toService
       )

@@ -5,6 +5,7 @@ name := "ApiChallenge"
 version := "0.1"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers += "jitpack" at "https://jitpack.io"
 
 val root = project
   .in(file("."))
@@ -36,8 +37,12 @@ libraryDependencies ++= Seq(
   Libs.PureConfig,
   Libs.FinagleOauth,
   Libs.TaglessSecurityCommon,
-  Libs.TaglessSecurityPassword
+  Libs.TaglessSecurityPassword,
+  Libs.FinchOauth
 )
+
+scalacOptions += "-Ypartial-unification"
+
 dockerBaseImage := "openjdk:jre-alpine"
 dockerRepository := Some("thealmikey")
 dockerExposedPorts.in(Docker) := Seq(8080)
