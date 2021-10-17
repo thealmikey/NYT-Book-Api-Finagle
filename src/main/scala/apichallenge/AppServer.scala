@@ -71,6 +71,33 @@ import java.util.Date
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
+  val createApp = for {
+    authorBookService <- authorBookServiceResource
+    redisAuth <- redisUserAuth
+    services <- Resource.liftF[IO, Service[Request, Response]](
+      IO(
+        Endpoint.toService(
+          auth(
+            Bootstrap
+              .serve[Application.Json](
+                registerFn(redisAuth) :+:
+                  tokensFn(redisAuth) :+:
+                  authorDateBookSearchEndpoint(authorBookService)
+              )
+              .compile,
+            redisAuth
+          )
+        )
+      )
+    )
+  } yield Http.server.withHttpStats
+    .withResponseClassifier(Api.nytResponseClassifier)
+    .withLabel("NYTimes-Http-Client")
+    .serve(":8080", services)
+
+  override def run(args: List[String]): IO[ExitCode] =
+    createApp.use(_ => IO.never).as(ExitCode.Success)
+
   /*
   Takes the data handler and feeds it to the authorize function for OAuth from finagle
   It's the endpoint we would direct our username and password to.
@@ -132,7 +159,7 @@ object AppServer extends IOApp with EndpointModule[IO] {
       compiled: Endpoint.Compiled[IO],
       redisDataHandler: RedisUserDataHandler
   ): Endpoint.Compiled[IO] = {
-    var authService = authInfoFn(redisDataHandler).toService
+    val authService = authInfoFn(redisDataHandler).toService
     Endpoint.Compiled[IO] {
       case req => {
 
@@ -142,6 +169,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
         ) {
           compiled(req)
         } else {
+          /*
+          We check for the token in WWW-Authenticate header
+           */
           redisDataHandler.findTheAccessToken(
             req.wwwAuthenticate.getOrElse("")
           ) match {
@@ -166,7 +196,6 @@ object AppServer extends IOApp with EndpointModule[IO] {
         println("Something else but we didn even check the backend")
         IO.pure(Trace.empty -> Right(Response(http.Status.Unauthorized)))
       }
-
     }
   }
 
@@ -201,12 +230,12 @@ object AppServer extends IOApp with EndpointModule[IO] {
   cumbersome, something like SQLite with an ORM like Doobie would have made it more pleasant.
    */
 
-  var userHashTokenStore =
+  val userHashTokenStore =
     RedisJsonCache.createServer[UserHashed, AccessToken] _
-  var clientUserHashStore = RedisJsonCache.createServer[ApiClient, UserHashed] _
-  var apiStringStore = RedisJsonCache.createServer[String, AccessToken] _
-  var tokenUserStore = RedisJsonCache.createServer[String, UserHashed] _
-  var apiUserStore = RedisJsonCache.createServer[User, UserHashed] _
+  val clientUserHashStore = RedisJsonCache.createServer[ApiClient, UserHashed] _
+  val apiStringStore = RedisJsonCache.createServer[String, AccessToken] _
+  val tokenUserStore = RedisJsonCache.createServer[String, UserHashed] _
+  val apiUserStore = RedisJsonCache.createServer[User, UserHashed] _
 
   implicit val contextShiftIO: ContextShift[IO] = IO.contextShift(global)
 
@@ -241,33 +270,6 @@ We create the RedisDataHandler instance
     apiUser
   )
 
-  val createApp = for {
-    authorBookService <- authorBookServiceResource
-    redisAuth <- redisUserAuth
-    services <- Resource.liftF[IO, Service[Request, Response]](
-      IO(
-        Endpoint.toService(
-          auth(
-            Bootstrap
-              .serve[Application.Json](
-                registerFn(redisAuth) :+:
-                  tokensFn(redisAuth) :+:
-                  authorDateBookSearchEndpoint(authorBookService)
-              )
-              .compile,
-            redisAuth
-          )
-        )
-      )
-    )
-  } yield Http.server.withHttpStats
-    .withResponseClassifier(Api.nytResponseClassifier)
-    .withLabel("NYTimes-Http-Client")
-    .serve(":8080", services)
-
-  override def run(args: List[String]): IO[ExitCode] =
-    createApp.use(_ => IO.never).as(ExitCode.Success)
-
   def authorDateBookSearchEndpoint(
       authorBookService: AuthorBookService
   ) = {
@@ -276,7 +278,7 @@ We create the RedisDataHandler instance
         "year"
       )
     ) { (author: String, year: List[String]) =>
-      var checkedYears = year.takeWhile {
+      val checkedYears = year.takeWhile {
         AuthorDateBookSearchValidation.validate(_) match {
           case Success(value) => true
           case Failure(exception) => {

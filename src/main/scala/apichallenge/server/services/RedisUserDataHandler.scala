@@ -174,31 +174,6 @@ case class RedisUserDataHandler(
       .asTwitter
   }
 
-//  override def findAuthInfoByRefreshToken(
-//      refreshToken: String
-//  ): Future[Option[AuthInfo[OAuthUser]]] = {
-//    accessTokens.values.find { at: AccessToken =>
-//      at.refreshToken.exists(_.equals(refreshToken))
-//    } match {
-//      case Some(at) => Future.value(authInfosByAccessToken.get(at.token))
-//      case None     => Future.value(None)
-//    }
-//  }
-
-//  override def findClientUser(
-//      clientId: String,
-//      clientSecret: String,
-//      scope: Option[String]
-//  ): Future[Option[OAuthUser]] = {
-//    clients.find {
-//      case ad =>
-//        clientId.equals(ad.clientId) && clientSecret.equals(ad.clientSecret)
-//    } match {
-//      case Some(ad) => Future.value(Some(ad.user))
-//      case None     => Future.value(None)
-//    }
-//  }
-
   override def findAccessToken(token: String): Future[Option[AccessToken]] = {
     apiStringStore.get(token).unsafeToFuture().asTwitter
   }
