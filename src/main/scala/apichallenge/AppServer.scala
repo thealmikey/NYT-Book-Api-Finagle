@@ -71,25 +71,37 @@ import java.util.Date
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
-  implicit val dateEncoder: Encoder[Date] =
-    Encoder[Long].contramap[Date](d ⇒ d.getTime)
-  implicit val dateDecoder: Decoder[Date] =
-    Decoder.instance(a => a.as[Long].map(new Date(_)))
+  /*
+  Takes the data handler and feeds it to the authorize function for OAuth from finagle
+  It's the endpoint we would direct our username and password to.
+   */
 
   def authInfoFn(
       redisDataHandler: DataHandler[UserHashed]
   ) =
     authorize[IO, UserHashed](redisDataHandler)
 
+  /*
+  Takes the data handler and creates an Endpoint we can use to get an Access token
+   */
+
   def accessToken(
       redisDataHandler: DataHandler[UserHashed]
   ): Endpoint[IO, GrantResult] =
     issueAccessToken[IO, UserHashed](redisDataHandler)
 
+  /*
+  Adds url paths to the path above to make more friend for the end user /users/auth
+   */
   def tokensFn(
       redisDataHandler: RedisUserDataHandler
   ) =
     post("users" :: "auth" :: accessToken(redisDataHandler))
+
+  /*
+  Endpoint to register user, takes username and password and returns a token.
+  No need to redirect user to login for this simple use case
+   */
 
   def registerFn(
       redisDataHandler: RedisUserDataHandler
@@ -109,6 +121,12 @@ object AppServer extends IOApp with EndpointModule[IO] {
         }
       }
     }
+
+  /*
+  We use this method to protect certain endpoints with Authentication.
+  We check uris where we don't want a token to access, for our use case, we leave "auth","login" and "register"
+
+   */
 
   def auth(
       compiled: Endpoint.Compiled[IO],
@@ -152,14 +170,6 @@ object AppServer extends IOApp with EndpointModule[IO] {
     }
   }
 
-//  def loginFn(redisDataHandler: RedisUserDataHandler) =
-//    post("login" :: body[User, Application.Json]).map({ user =>
-//     redisDataHandler.createHashedUser(user).flatMap{
-//
-//     }
-//      issueAccessToken(redisDataHandler)
-//    })
-
   val prod = None
 
   val config = ConfigSource.default.load[AppServerConf]
@@ -171,6 +181,25 @@ object AppServer extends IOApp with EndpointModule[IO] {
     prod
       .flatMap(_ => configOption.map(_.redis.host))
       .getOrElse("redis://localhost")
+
+  /*
+
+  The *Stores that follow are objects in Redis to achieve OAuth
+  Key-values using Redis, map to User objects and tokens.
+  - [[userHashTokenStore]] has the following (userHash-> AccessToken), object where the User with the password hashed is
+  paired with the Access Token object
+  - [[clientUserStore]] has the following (client -> UserHash)-> Although we don't have a complete system incorporating clients
+   for the oauth process the default lib comes packaged with the feature to enable this ability, our app is not
+   quite robust
+  - [[apiStringStore]] has the following ( tokenString -> AccessToken) enabling to fetch the complete token
+  details from the just having the string
+  - [[tokenUserStore]] has the following (tokenString -> UserHashed) stores tokens mapped to the owner of the token
+  - [[apiUserStore]] has the following (user -> UserHash) stores the plain User object paired with User object with
+  the hashed password
+
+  In retrospect, it's a huge tradeoff using Redis to represent these relationship. It makes queries quite
+  cumbersome, something like SQLite with an ORM like Doobie would have made it more pleasant.
+   */
 
   var userHashTokenStore =
     RedisJsonCache.createServer[UserHashed, AccessToken] _
@@ -194,7 +223,9 @@ object AppServer extends IOApp with EndpointModule[IO] {
       new AuthorBookRedisStore(redisForBooks),
       new NyTimesService(apiKey = apiKey)
     )
-
+  /*
+We create the RedisDataHandler instance
+   */
   val redisUserAuth = for {
     client <- RedisClient[IO].from(redisUrl)
     userHashToken <- userHashTokenStore(client)
@@ -287,8 +318,5 @@ object AppServer extends IOApp with EndpointModule[IO] {
       }
     }
   }
-//  def handleApiException(apiException: ApiException) = {
-//    apiException
-//  }
 
 }

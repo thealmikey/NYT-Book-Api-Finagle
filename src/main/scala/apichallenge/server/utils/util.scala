@@ -1,7 +1,8 @@
 package apichallenge.server.utils
 
-import io.circe.{Encoder, Json}
+import io.circe.{Decoder, Encoder, Json}
 
+import java.util.Date
 import scala.concurrent.ExecutionContext
 
 object util {
@@ -40,7 +41,12 @@ object util {
 
       p
     }
+
   }
+  implicit val dateEncoder: Encoder[Date] =
+    Encoder[Long].contramap[Date](d ⇒ d.getTime)
+  implicit val dateDecoder: Decoder[Date] =
+    Decoder.instance(a => a.as[Long].map(new Date(_)))
 
 //  def encodeErrorList(es: List[ExcepTFuturen]): Json = {
 //    val messages = es.map(x => Json.fromString(x.getMessage))
