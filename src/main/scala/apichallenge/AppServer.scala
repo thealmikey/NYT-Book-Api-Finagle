@@ -71,7 +71,7 @@ import java.util.Date
 
 object AppServer extends IOApp with EndpointModule[IO] {
 
-  val createApp = for {
+  lazy val createApp = for {
     authorBookService <- authorBookServiceResource
     redisAuth <- redisUserAuth
     services <- Resource.liftF[IO, Service[Request, Response]](

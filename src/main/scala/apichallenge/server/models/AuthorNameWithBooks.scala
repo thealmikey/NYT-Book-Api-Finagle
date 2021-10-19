@@ -1,3 +1,3 @@
 package apichallenge.server.models
 
-case class AuthorNameWithBooks(author: String, books: Some[List[Book]])
+case class AuthorNameWithBooks(author: Option[String], books: Some[List[Book]])

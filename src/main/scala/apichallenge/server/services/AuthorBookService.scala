@@ -193,7 +193,7 @@ class AuthorBookService(
         var authorBooks = rawAuthorBooks
           .map(mapRawBookToApiBook(_))
         AuthorNameWithBooks(
-          authorBookTuple._1.get,
+          authorBookTuple._1,
           Some(
             authorBooks
           )
